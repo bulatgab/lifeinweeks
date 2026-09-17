@@ -61,6 +61,7 @@
     <p class="hint">Colour stretches of your life — school, a job, a relationship, a country. Later periods paint over earlier ones.</p>
     <ul id="ranges" class="rows"></ul>
     <button id="add-range" type="button" class="secondary">+ Add period</button>
+    <label class="toggle"><input type="checkbox" id="link"> Join the dots of a period, like water drops</label>
 
     <h2>Dates</h2>
     <p class="hint">Mark a single week with a ring — a wedding, a loss, a move, a deadline. Rings sit on top of periods, so both stay visible.</p>
@@ -76,6 +77,11 @@
       <button id="copy" type="button" class="primary">Copy link</button>
       <button id="reset" type="button" class="danger">Reset everything</button>
     </div>
+    <div id="colorpop" hidden>
+      <div class="presets"></div>
+      <label class="custom"><span>Custom</span><input type="color" aria-label="Custom colour"></label>
+    </div>
+
     <p class="hint credits">Inspired by <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) and <a href="https://www.youtube.com/watch?v=MBRqu0YOH14" target="_blank" rel="noopener">this Kurzgesagt video</a>. <a href="https://github.com/bulatgab/lifespan" target="_blank" rel="noopener">Source</a>.</p>
   </section>
 </div>
@@ -83,7 +89,7 @@
 <template id="range-row">
   <li class="row">
     <div class="row-head">
-      <input type="color" class="r-color" aria-label="Period colour">
+      <button type="button" class="r-color" aria-label="Period colour" aria-haspopup="true"></button>
       <input type="text" class="r-label" placeholder="Label (e.g. University)" maxlength="60" aria-label="Period label">
       <button type="button" class="r-del" aria-label="Delete period">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -106,7 +112,7 @@
 <template id="event-row">
   <li class="row">
     <div class="row-head">
-      <input type="color" class="r-color" aria-label="Date colour">
+      <button type="button" class="r-color" aria-label="Date colour" aria-haspopup="true"></button>
       <input type="text" class="r-label" placeholder="Label (e.g. Wedding)" maxlength="60" aria-label="Date label">
       <button type="button" class="r-del" aria-label="Delete date">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">

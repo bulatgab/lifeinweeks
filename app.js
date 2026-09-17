@@ -14,12 +14,10 @@ const DEFAULT_THEME = 'dusk';
 const THEMES = {
   dusk:  { name: 'Dusk',  bg: '#1a0b2e', panel: '#24123d', ink: '#f4effa', past: '#5b2fa3', future: '#ff4370', today: '#30f0ff', accent: '#ff4370', onAccent: '#ffffff',
            presets: ['#ffb340', '#22c9a8', '#4f9df9', '#f0f0f5', '#b45309'] },
-  slate: { name: 'Slate', bg: '#2e3440', panel: '#3b4252', ink: '#eceff4', past: '#4c566a', future: '#d8dee9', today: '#88c0d0', accent: '#88c0d0', onAccent: '#2e3440',
-           presets: ['#c1666b', '#5b8def', '#e6b450', '#5fb3a1'] },
-  moss:  { name: 'Moss',  bg: '#121c17', panel: '#1a2721', ink: '#e8efe9', past: '#2f4a3f', future: '#d9e2d3', today: '#f5d76e', accent: '#8fbf9f', onAccent: '#121c17',
-           presets: ['#c1666b', '#d4a017', '#5b8def', '#5fb3a1'] },
   ink:   { name: 'Ink',   bg: '#141418', panel: '#1c1c22', ink: '#ececf0', past: '#2c2c34', future: '#b8b8c4', today: '#ff7a59', accent: '#ff7a59', onAccent: '#141418',
            presets: ['#d4a017', '#5b8def', '#3fa7a0', '#bf616a', '#eceff4'] },
+  slate: { name: 'Slate', bg: '#2e3440', panel: '#3b4252', ink: '#eceff4', past: '#4c566a', future: '#d8dee9', today: '#88c0d0', accent: '#88c0d0', onAccent: '#2e3440',
+           presets: ['#c1666b', '#5b8def', '#e6b450', '#5fb3a1'] },
   paper: { name: 'Paper', bg: '#f5f0e6', panel: '#fffdf8', ink: '#2a2a33', past: '#d3c9b8', future: '#3b3946', today: '#d9534f', accent: '#d9534f', onAccent: '#ffffff', light: true,
            presets: ['#2f6b2f', '#a67c00', '#4f74a8', '#b0417a', '#7c3aed'] },
 };
@@ -73,12 +71,14 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 //   ?b=1990-01-01&l=80&t=slate
 //    &r=2008-09-01~2013-06-30~ffb340~University   (period; empty end = ongoing)
 //    &d=2015-08-22~22c9a8~Wedding                 (single date, drawn as a ring)
+//    &c=1                                          (join the dots of a period)
 // ---------------------------------------------------------------------------
 
 const state = {
   birth: null,        // UTC ts | null
   years: DEFAULT_YEARS,
   theme: DEFAULT_THEME,
+  link: false,        // join adjacent dots of the same period with a water-drop bridge
   ranges: [],         // { start: ts|null, end: ts|null, color, label }
   events: [],         // { date: ts, color, label }
 };
@@ -91,6 +91,7 @@ function readURL() {
   const l = parseInt(p.get('l'), 10);
   state.years = Number.isFinite(l) ? clamp(l, 1, 150) : DEFAULT_YEARS;
   state.theme = THEMES[p.get('t')] ? p.get('t') : DEFAULT_THEME;
+  state.link = p.get('c') === '1';
   state.ranges = p.getAll('r').map(decodeRange).filter(Boolean);
   state.events = p.getAll('d').map(decodeEvent).filter(Boolean);
 }
@@ -118,6 +119,7 @@ function writeURL() {
   if (state.birth !== null) parts.push('b=' + toISO(state.birth));
   if (state.years !== DEFAULT_YEARS) parts.push('l=' + state.years);
   if (state.theme !== DEFAULT_THEME) parts.push('t=' + state.theme);
+  if (state.link) parts.push('c=1');
   for (const r of state.ranges) {
     if (r.start === null) continue;
     parts.push('r=' + [toISO(r.start), r.end === null ? '' : toISO(r.end), r.color.slice(1), encLabel(r.label)].join('~'));
@@ -277,6 +279,8 @@ function draw() {
     if (!arr) groups.set(c, (arr = []));
     arr.push(i);
   }
+  const topRange = (i) => { const c = model.covering[i]; return c ? c[c.length - 1] : null; };
+  const R = cell * 0.27;                   // radius of the concave meniscus arcs (smaller = thinner neck)
   for (const [color, idx] of groups) {
     ctx.fillStyle = color;
     ctx.beginPath();
@@ -284,6 +288,14 @@ function draw() {
       const [cx, cy] = centre(i);
       ctx.moveTo(cx + r, cy);
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    }
+    if (state.link) {
+      for (const i of idx) {
+        const p = topRange(i);
+        if (!p) continue;
+        if ((i + 1) % cols !== 0 && i + 1 < model.total && topRange(i + 1) === p) bridge(...centre(i), ...centre(i + 1), r, R);
+        if (i + cols < model.total && topRange(i + cols) === p) bridge(...centre(i), ...centre(i + cols), r, R);
+      }
     }
     ctx.fill();
   }
@@ -317,6 +329,34 @@ function draw() {
   }
 
   if (cur >= 0 && cur < model.total) drawFlag(...centre(cur), r, w);
+}
+
+// The region between two touching-distance dots bounded by their own circles and
+// two concave arcs of radius R tangent to both — the shape a water bridge makes.
+// It shares boundaries with the dots but never overlaps them, so it can live in
+// the same path regardless of winding direction.
+function bridge(x1, y1, x2, y2, r, R) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const d = Math.hypot(dx, dy);
+  const half = d / 2;
+  const hh = (r + R) ** 2 - half ** 2;
+  if (hh <= 0) return;                     // dots too far apart for this R
+  const h = Math.sqrt(hh);                 // distance from the midpoint to a meniscus centre
+  const ux = dx / d, uy = dy / d;          // along the pair
+  const nx = -uy, ny = ux;                 // across it
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+  const th = Math.atan2(uy, ux);           // angle of u
+  const a = Math.atan2(h, half);           // half-angle the bridge occupies on each dot
+  const c1x = mx + h * nx, c1y = my + h * ny;
+  const c2x = mx - h * nx, c2y = my - h * ny;
+  // start at the tangent point on dot 1 nearest meniscus 1
+  const k = r / (r + R);
+  ctx.moveTo(x1 + (c1x - x1) * k, y1 + (c1y - y1) * k);
+  ctx.arc(c1x, c1y, R, th - Math.PI + a, th - a);           // concave, over to dot 2
+  ctx.arc(x2, y2, r, th + Math.PI - a, th + Math.PI + a);   // along dot 2's edge
+  ctx.arc(c2x, c2y, R, th + a, th + Math.PI - a);           // concave, back to dot 1
+  ctx.arc(x1, y1, r, th - a, th + a);                       // along dot 1's edge
+  ctx.closePath();
 }
 
 function drawFlag(cx, cy, r, w) {
@@ -549,6 +589,7 @@ function openPanel() {
 }
 
 function closePanel() {
+  closeColorPop();
   panel.hidden = true;
   fab.setAttribute('aria-expanded', 'false');
   fab.focus({ preventScroll: true });
@@ -557,12 +598,14 @@ function closePanel() {
 function syncForm() {
   birthField.set(state.birth);
   yearsIn.value = state.years;
+  linkIn.checked = state.link;
   updateTotalHint();
   syncRows();
   syncThemes();
 }
 
 function syncRows() {
+  closeColorPop();
   const [y0, y1] = lifeYears();
   rangesEl.replaceChildren(...state.ranges.map(r => buildRangeRow(r, y0, y1)));
   eventsEl.replaceChildren(...state.events.map(e => buildEventRow(e, y0, y1)));
@@ -586,9 +629,9 @@ function updateTotalHint() {
 function wireHead(li, item, list) {
   const color = li.querySelector('.r-color');
   const label = li.querySelector('.r-label');
-  color.value = item.color;
+  color.style.setProperty('--c', item.color);
   label.value = item.label;
-  color.addEventListener('input', () => { item.color = color.value; render(); });
+  color.addEventListener('click', () => openColorPop(color, item));
   label.addEventListener('input', () => { item.label = label.value; render(); });
   li.querySelector('.r-del').addEventListener('click', () => {
     list.splice(list.indexOf(item), 1);
@@ -631,6 +674,54 @@ function buildEventRow(e, y0, y1) {
   return li;
 }
 
+// One popover shared by every colour button: the theme's presets plus a free picker.
+const colorPop = document.getElementById('colorpop');
+const colorPresets = colorPop.querySelector('.presets');
+const colorCustom = colorPop.querySelector('input[type="color"]');
+const sheet = document.getElementById('sheet');
+let popTarget = null;   // { btn, item } while open
+
+function openColorPop(btn, item) {
+  if (popTarget && popTarget.btn === btn) return closeColorPop();
+  popTarget = { btn, item };
+  colorPresets.replaceChildren(...theme().presets.map(c => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pc' + (c === item.color ? ' on' : '');
+    b.style.setProperty('--c', c);
+    b.setAttribute('aria-label', c);
+    b.addEventListener('click', () => { setItemColor(c); closeColorPop(); });
+    return b;
+  }));
+  colorCustom.value = item.color;
+  colorPop.hidden = false;
+  // Position under the button, in the sheet's scrolling coordinate space.
+  const br = btn.getBoundingClientRect(), sr = sheet.getBoundingClientRect();
+  const left = Math.min(br.left - sr.left, sr.width - colorPop.offsetWidth - 12);
+  colorPop.style.left = Math.max(12, left) + 'px';
+  colorPop.style.top = (br.bottom - sr.top + sheet.scrollTop + 6) + 'px';
+  colorPresets.querySelector('.on, .pc')?.focus({ preventScroll: true });
+}
+
+function setItemColor(c) {
+  if (!popTarget) return;
+  popTarget.item.color = c;
+  popTarget.btn.style.setProperty('--c', c);
+  for (const b of colorPresets.children) b.classList.toggle('on', b.style.getPropertyValue('--c') === c);
+  render();
+}
+
+function closeColorPop() {
+  colorPop.hidden = true;
+  popTarget = null;
+}
+
+colorCustom.addEventListener('input', () => setItemColor(colorCustom.value));
+sheet.addEventListener('scroll', () => { if (popTarget) closeColorPop(); }, { passive: true });
+document.addEventListener('pointerdown', (e) => {
+  if (popTarget && !colorPop.contains(e.target) && !popTarget.btn.contains(e.target)) closeColorPop();
+});
+
 function syncThemes() {
   themesEl.replaceChildren(...Object.entries(THEMES).map(([key, t]) => {
     const label = document.createElement('label');
@@ -644,7 +735,7 @@ function syncThemes() {
     input.checked = key === state.theme;
     input.addEventListener('change', () => {
       switchTheme(key);
-      syncRows();          // colour inputs may have been remapped
+      syncRows();          // swatch buttons may have been remapped
       render();
     });
     return label;
@@ -693,6 +784,7 @@ document.getElementById('reset').addEventListener('click', () => {
   state.years = DEFAULT_YEARS;
   state.ranges = [];
   state.events = [];
+  state.link = false;
   syncForm();
   render();
   document.querySelector('#birth select').focus({ preventScroll: true });
@@ -702,8 +794,12 @@ fab.addEventListener('click', openPanel);
 closeBtn.addEventListener('click', closePanel);
 document.getElementById('backdrop').addEventListener('click', closePanel);
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !panel.hidden) closePanel();
+  if (e.key !== 'Escape' || panel.hidden) return;
+  popTarget ? closeColorPop() : closePanel();
 });
+
+const linkIn = document.getElementById('link');
+linkIn.addEventListener('change', () => { state.link = linkIn.checked; render(); });
 
 // ---------------------------------------------------------------------------
 // Boot

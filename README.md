@@ -23,10 +23,14 @@ and Kurzgesagt's [*What Are You Doing With Your Life?*](https://www.youtube.com/
   base dots; tick "Ongoing" for something still running. Single dates — a
   wedding, a loss, a deadline — are drawn as a ring around the week's dot, so
   they stay visible on top of a period.
-- **Five themes.** Dusk (vivid, after the Kurzgesagt video), Slate, Moss, Ink
-  and Paper. Each theme's default period colours were checked all-pairs, on that
+- **Four themes.** Dusk (vivid, after the Kurzgesagt video), Ink, Slate and
+  Paper. Each theme's default period colours were checked all-pairs, on that
   theme's own background, for colour-vision-deficiency and normal-vision
-  separation.
+  separation. Those defaults are offered as swatches in the colour picker,
+  next to a free picker.
+- **Optional water-drop bridges.** Adjacent dots of the same period can be
+  joined by concave "meniscus" bridges (`?c=1`), so a period reads as one
+  beaded shape rather than a field of dots.
 - **Everything else is under one button.** The grid is the page; a floating
   action button opens the settings sheet.
 
@@ -42,9 +46,10 @@ and Kurzgesagt's [*What Are You Doing With Your Life?*](https://www.youtube.com/
 |-----|---------|
 | `b` | date of birth, `YYYY-MM-DD` |
 | `l` | expected lifespan in years (omitted when it's the default, 80) |
-| `t` | theme: `dusk` (default, omitted), `slate`, `moss`, `ink`, `paper` |
+| `t` | theme: `dusk` (default, omitted), `ink`, `slate`, `paper` |
 | `r` | one period: `start~end~rrggbb~label`, repeatable; empty `end` = ongoing (until today) |
 | `d` | one date: `date~rrggbb~label`, repeatable; drawn as a ring |
+| `c` | `1` to join the dots of each period with water-drop bridges |
 
 Dates are entered through three native `<select>`s (day / month / year) rather
 than `<input type="date">`: on iOS that gives the wheel picker, elsewhere a
