@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1a0b2e">
   <meta name="color-scheme" content="dark">
-  <title>Weeks</title>
+  <title>Life in Weeks</title>
   <meta name="description" content="Your life in weeks — one dot per week. Everything you enter lives in the page address; bookmark it and it's saved.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231a0b2e'/%3E%3Ccircle cx='9' cy='9' r='3' fill='%235b2fa3'/%3E%3Ccircle cx='16' cy='9' r='3' fill='%235b2fa3'/%3E%3Ccircle cx='23' cy='9' r='3' fill='%2330f0ff'/%3E%3Ccircle cx='9' cy='16' r='3' fill='%23ff4370'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23ff4370'/%3E%3Ccircle cx='23' cy='16' r='3' fill='%23ff4370'/%3E%3Ccircle cx='9' cy='23' r='3' fill='%23ff4370'/%3E%3Ccircle cx='16' cy='23' r='3' fill='%23ff4370'/%3E%3Ccircle cx='23' cy='23' r='3' fill='%23ff4370'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./style.css">
@@ -61,7 +61,16 @@
     <p class="hint">Colour stretches of your life — school, a job, a relationship, a country. Later periods paint over earlier ones.</p>
     <ul id="ranges" class="rows"></ul>
     <button id="add-range" type="button" class="secondary">+ Add period</button>
-    <label class="toggle"><input type="checkbox" id="link"> Water: join the dots of each period</label>
+        <div class="field" style="margin-top:14px">
+      <span class="label">Water between the dots</span>
+      <div id="water" class="seg" role="radiogroup" aria-label="Water between the dots">
+        <label><input type="radio" name="water" value="0" checked><span>Off</span></label>
+        <label><input type="radio" name="water" value="1"><span>Scalloped</span></label>
+        <label><input type="radio" name="water" value="2"><span>Straight</span></label>
+        <label><input type="radio" name="water" value="3"><span>Filled</span></label>
+      </div>
+      <p class="hint" style="margin:2px 0 0">Floods each period — and the past and the future — with a quieter shade of its own colour. Scalloped keeps a concave meniscus between the outer dots; Straight runs the edge flush with them; Filled lets neighbouring regions touch.</p>
+    </div>
 
     <h2>Dates</h2>
     <p class="hint">Mark a single week with a ring — a wedding, a loss, a move, a deadline. Rings sit on top of periods, so both stay visible.</p>
@@ -78,12 +87,11 @@
       <button id="reset" type="button" class="danger">Reset everything</button>
     </div>
     <div id="colorpop" hidden>
-      <div class="presets" aria-label="Suggested colours"></div>
-      <div class="presets more" aria-label="More colours"></div>
+      <div class="presets" aria-label="Colours"></div>
       <label class="custom"><span>Custom</span><input type="color" aria-label="Custom colour"></label>
     </div>
 
-    <p class="hint credits">Inspired by <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) and <a href="https://www.youtube.com/watch?v=MBRqu0YOH14" target="_blank" rel="noopener">this Kurzgesagt video</a>. <a href="https://github.com/bulatgab/lifespan" target="_blank" rel="noopener">Source</a>.</p>
+    <p class="hint credits">Inspired by <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) and <a href="https://www.youtube.com/watch?v=MBRqu0YOH14" target="_blank" rel="noopener">this Kurzgesagt video</a>. <a href="https://github.com/bulatgab/lifeinweeks" target="_blank" rel="noopener">Source</a>.</p>
   </section>
 </div>
 

@@ -71,7 +71,7 @@ function oklchToHex(L, C, h) {
 }
 
 // Twelve hues at one perceptual lightness and chroma, plus two neutrals —
-// the "more colours" row of the picker, tuned per theme.
+// shown in the picker after the theme's validated presets, tuned per theme.
 function extendedColors(t) {
   const hues = [20, 50, 80, 110, 140, 170, 200, 230, 260, 290, 320, 350];
   return [
@@ -134,14 +134,14 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 //   ?b=1990-01-01&l=80&t=slate
 //    &r=2008-09-01~2013-06-30~ffb340~University   (period; empty end = ongoing)
 //    &d=2015-08-22~22c9a8~Wedding                 (single date, drawn as a ring)
-//    &c=1                                          (join the dots of a period)
+//    &c=1                                          (water between dots: 1 scalloped, 2 straight, 3 filled)
 // ---------------------------------------------------------------------------
 
 const state = {
   birth: null,        // UTC ts | null
   years: DEFAULT_YEARS,
   theme: DEFAULT_THEME,
-  link: false,        // join adjacent dots of the same period with a water-drop bridge
+  water: 0,           // 0 off · 1 scalloped (menisci) · 2 straight (tangent to dots) · 3 filled (whole cells)
   ranges: [],         // { start: ts|null, end: ts|null, color, label }
   events: [],         // { date: ts, color, label }
 };
@@ -154,7 +154,7 @@ function readURL() {
   const l = parseInt(p.get('l'), 10);
   state.years = Number.isFinite(l) ? clamp(l, 1, 150) : DEFAULT_YEARS;
   state.theme = THEMES[p.get('t')] ? p.get('t') : DEFAULT_THEME;
-  state.link = p.get('c') === '1';
+  state.water = ['1', '2', '3'].includes(p.get('c')) ? +p.get('c') : 0;
   state.ranges = p.getAll('r').map(decodeRange).filter(Boolean);
   state.events = p.getAll('d').map(decodeEvent).filter(Boolean);
 }
@@ -182,7 +182,7 @@ function writeURL() {
   if (state.birth !== null) parts.push('b=' + toISO(state.birth));
   if (state.years !== DEFAULT_YEARS) parts.push('l=' + state.years);
   if (state.theme !== DEFAULT_THEME) parts.push('t=' + state.theme);
-  if (state.link) parts.push('c=1');
+  if (state.water) parts.push('c=' + state.water);
   for (const r of state.ranges) {
     if (r.start === null) continue;
     parts.push('r=' + [toISO(r.start), r.end === null ? '' : toISO(r.end), r.color.slice(1), encLabel(r.label)].join('~'));
@@ -348,22 +348,34 @@ function draw() {
     g.idx.push(i);
   }
 
-  // Water: for each region, a concave lens between every orthogonal pair of
-  // neighbours plus a square between the centres of every 2x2 block. Together
-  // they fill the interior while the outer border stays scalloped. Everything
-  // is traced clockwise so overlaps add up under the nonzero fill rule.
-  if (state.link) {
-    const R = cell * 0.4;                  // meniscus radius: smaller = deeper scallops
+  // Water: one path per region, filled once. All primitives are traced
+  // clockwise so overlaps add up under the nonzero rule.
+  //   scalloped — a concave lens between neighbours + a square per 2x2 block
+  //   straight  — per cell a disc-cornered square tangent to the dot, + rects
+  //               bridging neighbours + a square per 2x2 block
+  //   filled    — the same with the square grown to the whole cell (regions meet)
+  if (state.water) {
+    const style = state.water;
+    const R = cell * 0.4;                              // meniscus radius (scalloped)
+    const e = style === 2 ? r : cell / 2 + 0.5;        // half-extent; +0.5px so touching tiles overdraw their seam
+    const rho = style === 2 ? r : cell * 0.2;          // corner radius of the region's convex corners
     for (const [id, g] of groups) {
       ctx.fillStyle = waterColor(g.color);
       ctx.beginPath();
       for (const i of g.idx) {
         const right = (i + 1) % cols !== 0 && i + 1 < model.total && ids[i + 1] === id;
         const down = i + cols < model.total && ids[i + cols] === id;
+        const block = right && down && ids[i + cols + 1] === id;
         const [cx, cy] = centre(i);
-        if (right) bridge(cx, cy, cx + cell, cy, r, R);
-        if (down) bridge(cx, cy, cx, cy + cell, r, R);
-        if (right && down && ids[i + cols + 1] === id) ctx.rect(cx, cy, cell, cell);
+        if (style === 1) {
+          if (right) bridge(cx, cy, cx + cell, cy, r, R);
+          if (down) bridge(cx, cy, cx, cy + cell, r, R);
+        } else {
+          ctx.roundRect(cx - e, cy - e, 2 * e, 2 * e, rho);
+          if (right) ctx.rect(cx, cy - e, cell, 2 * e);
+          if (down) ctx.rect(cx - e, cy, 2 * e, cell);
+        }
+        if (block) ctx.rect(cx, cy, cell, cell);
       }
       ctx.fill();
     }
@@ -678,7 +690,7 @@ function closePanel() {
 function syncForm() {
   birthField.set(state.birth);
   yearsIn.value = state.years;
-  linkIn.checked = state.link;
+  waterEl.querySelector(`input[value="${state.water}"]`).checked = true;
   updateTotalHint();
   syncRows();
   syncThemes();
@@ -757,7 +769,6 @@ function buildEventRow(e, y0, y1) {
 // One popover shared by every colour button: the theme's presets plus a free picker.
 const colorPop = document.getElementById('colorpop');
 const colorPresets = colorPop.querySelector('.presets');
-const colorMore = colorPop.querySelector('.more');
 const colorCustom = colorPop.querySelector('input[type="color"]');
 const sheet = document.getElementById('sheet');
 let popTarget = null;   // { btn, item } while open
@@ -774,8 +785,7 @@ function openColorPop(btn, item) {
     b.addEventListener('click', () => { setItemColor(c); closeColorPop(); });
     return b;
   };
-  colorPresets.replaceChildren(...theme().presets.map(swatch));
-  colorMore.replaceChildren(...extendedColors(theme()).map(swatch));
+  colorPresets.replaceChildren(...[...theme().presets, ...extendedColors(theme())].map(swatch));
   colorCustom.value = item.color;
   colorPop.hidden = false;
   // Position under the button, in the sheet's scrolling coordinate space.
@@ -867,7 +877,7 @@ document.getElementById('reset').addEventListener('click', () => {
   state.years = DEFAULT_YEARS;
   state.ranges = [];
   state.events = [];
-  state.link = false;
+  state.water = 0;
   syncForm();
   render();
   document.querySelector('#birth select').focus({ preventScroll: true });
@@ -881,8 +891,10 @@ document.addEventListener('keydown', (e) => {
   popTarget ? closeColorPop() : closePanel();
 });
 
-const linkIn = document.getElementById('link');
-linkIn.addEventListener('change', () => { state.link = linkIn.checked; render(); });
+const waterEl = document.getElementById('water');
+waterEl.addEventListener('change', (e) => {
+  if (e.target.name === 'water') { state.water = +e.target.value; render(); }
+});
 
 // ---------------------------------------------------------------------------
 // Boot

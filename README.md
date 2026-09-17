@@ -1,9 +1,9 @@
-# Weeks
+# Life in Weeks
 
 Your life in weeks — one dot per week, on a single screen, with the past dimmed
 and the future bright.
 
-**Live:** https://bulatgab.github.io/lifespan/
+**Live:** https://bulatgab.github.io/lifeinweeks/
 
 Inspired by Wait But Why's [*Your Life in Weeks*](https://waitbutwhy.com/2014/05/life-weeks.html)
 and Kurzgesagt's [*What Are You Doing With Your Life?*](https://www.youtube.com/watch?v=MBRqu0YOH14).
@@ -29,14 +29,15 @@ and Kurzgesagt's [*What Are You Doing With Your Life?*](https://www.youtube.com/
   separation. Those defaults are offered as swatches in the colour picker,
   above a twelve-hue ring generated at one perceptual lightness for the
   theme, and a free picker.
-- **Optional "water" (`?c=1`).** Each region — every period, and the past
-  and future too — is flooded with a recessive tint of its own colour, with
-  a scalloped, concave border between the outermost dots, as if a film of
-  water spanned them. The tint is the dot colour mixed 55 % toward the
-  theme's background in OKLab, so it recedes correctly on dark and light
-  themes alike. Geometrically the flood is the union of a concave lens
-  between every orthogonally adjacent pair and a square between the centres
-  of every 2×2 block, all traced clockwise into one path.
+- **Optional "water" (`?c=1|2|3`).** Each region — every period, and the
+  past and future too — is flooded with a recessive tint of its own colour:
+  the dot colour mixed 55 % toward the theme's background in OKLab, so it
+  recedes correctly on dark and light themes alike. Three edge styles:
+  *scalloped* (a concave meniscus between the outer dots), *straight* (the
+  edge runs tangent to the dots, whose circles form the corners) and
+  *filled* (whole cells, so neighbouring regions touch). Each is the union
+  of one primitive per cell or per adjacent pair plus a square per 2×2
+  block, traced clockwise into a single nonzero-winding path.
 - **Everything else is under one button.** The grid is the page; a floating
   action button opens the settings sheet.
 
@@ -55,7 +56,7 @@ and Kurzgesagt's [*What Are You Doing With Your Life?*](https://www.youtube.com/
 | `t` | theme: `dusk` (default, omitted), `ink`, `slate`, `paper` |
 | `r` | one period: `start~end~rrggbb~label`, repeatable; empty `end` = ongoing (until today) |
 | `d` | one date: `date~rrggbb~label`, repeatable; drawn as a ring |
-| `c` | `1` to flood each region with water between its dots |
+| `c` | water between the dots: `1` scalloped, `2` straight, `3` filled |
 
 Dates are entered through three native `<select>`s (day / month / year) rather
 than `<input type="date">`: on iOS that gives the wheel picker, elsewhere a
