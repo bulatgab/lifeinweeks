@@ -279,16 +279,19 @@ input[type="number"]::-webkit-inner-spin-button { opacity: 0.6; }
   position: absolute;
   z-index: 4;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 8px;
   padding: 10px;
+  max-width: calc(100% - 24px);
   border-radius: 12px;
   background: var(--bg-2);
   border: 1px solid var(--line);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
-#colorpop .presets { display: flex; gap: 8px; }
+#colorpop .presets { display: flex; flex-wrap: wrap; gap: 8px; }
+#colorpop .more { gap: 6px; padding-top: 8px; border-top: 1px solid var(--line); }
+#colorpop .more .pc { width: 22px; height: 22px; }
 #colorpop .pc {
   width: 28px; height: 28px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
   background: var(--c); box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 15%, transparent);
@@ -296,8 +299,8 @@ input[type="number"]::-webkit-inner-spin-button { opacity: 0.6; }
 #colorpop .pc.on { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 4px var(--ink); }
 #colorpop .pc:focus-visible { outline: 2px solid var(--today); outline-offset: 2px; }
 #colorpop .custom {
-  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2);
-  padding-left: 8px; border-left: 1px solid var(--line); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2);
+  padding-top: 8px; border-top: 1px solid var(--line); cursor: pointer; align-self: stretch;
 }
 #colorpop .custom input {
   width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer;

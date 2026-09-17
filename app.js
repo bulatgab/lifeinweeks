@@ -13,14 +13,77 @@ const DEFAULT_THEME = 'dusk';
 // deficiency and normal-vision separation.
 const THEMES = {
   dusk:  { name: 'Dusk',  bg: '#1a0b2e', panel: '#24123d', ink: '#f4effa', past: '#5b2fa3', future: '#ff4370', today: '#30f0ff', accent: '#ff4370', onAccent: '#ffffff',
-           presets: ['#ffb340', '#22c9a8', '#4f9df9', '#f0f0f5', '#b45309'] },
+           presets: ['#ffb340', '#22c9a8', '#4f9df9', '#f0f0f5', '#b45309'], ring: { L: 0.8, C: 0.17 } },
   ink:   { name: 'Ink',   bg: '#141418', panel: '#1c1c22', ink: '#ececf0', past: '#2c2c34', future: '#b8b8c4', today: '#ff7a59', accent: '#ff7a59', onAccent: '#141418',
-           presets: ['#d4a017', '#5b8def', '#3fa7a0', '#bf616a', '#eceff4'] },
+           presets: ['#d4a017', '#5b8def', '#3fa7a0', '#bf616a', '#eceff4'], ring: { L: 0.78, C: 0.12 } },
   slate: { name: 'Slate', bg: '#2e3440', panel: '#3b4252', ink: '#eceff4', past: '#4c566a', future: '#d8dee9', today: '#88c0d0', accent: '#88c0d0', onAccent: '#2e3440',
-           presets: ['#c1666b', '#5b8def', '#e6b450', '#5fb3a1'] },
+           presets: ['#c1666b', '#5b8def', '#e6b450', '#5fb3a1'], ring: { L: 0.78, C: 0.12 } },
   paper: { name: 'Paper', bg: '#f5f0e6', panel: '#fffdf8', ink: '#2a2a33', past: '#d3c9b8', future: '#3b3946', today: '#d9534f', accent: '#d9534f', onAccent: '#ffffff', light: true,
-           presets: ['#2f6b2f', '#a67c00', '#4f74a8', '#b0417a', '#7c3aed'] },
+           presets: ['#2f6b2f', '#a67c00', '#4f74a8', '#b0417a', '#7c3aed'], ring: { L: 0.52, C: 0.13 } },
 };
+
+// ---------------------------------------------------------------------------
+// Colour maths in OKLab (Björn Ottosson's perceptual space). Used to derive the
+// recessive "water" tint from any dot colour by mixing it toward the theme's
+// background — the same operation design systems use to build tonal scales —
+// and to generate the extended swatch ring at a uniform lightness/chroma.
+// ---------------------------------------------------------------------------
+
+const hexToRgb = (hex) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => v / 255); };
+const rgbToHex = (rgb) => '#' + rgb.map(v => Math.round(clamp(v, 0, 1) * 255).toString(16).padStart(2, '0')).join('');
+const toLin = (c) => c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+const fromLin = (c) => c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
+
+function rgbToOklab(rgb) {
+  const [R, G, B] = rgb.map(toLin);
+  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
+  const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
+  const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
+  return [0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+          1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+          0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s];
+}
+
+function oklabToLinear([L, a, b]) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
+  return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+          -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+          -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s];
+}
+
+const oklabToHex = (lab) => rgbToHex(oklabToLinear(lab).map(v => fromLin(clamp(v, 0, 1))));
+
+function mixOklab(hexA, hexB, t) {
+  const A = rgbToOklab(hexToRgb(hexA)), B = rgbToOklab(hexToRgb(hexB));
+  return oklabToHex(A.map((v, i) => v + (B[i] - v) * t));
+}
+
+// OKLCH -> hex, pulling chroma in until the colour fits the sRGB gamut.
+function oklchToHex(L, C, h) {
+  const rad = (h * Math.PI) / 180;
+  for (let c = C; c >= 0; c -= 0.005) {
+    const lin = oklabToLinear([L, c * Math.cos(rad), c * Math.sin(rad)]);
+    if (lin.every(v => v >= -0.0005 && v <= 1.0005)) return rgbToHex(lin.map(v => fromLin(clamp(v, 0, 1))));
+  }
+  return oklabToHex([L, 0, 0]);
+}
+
+// Twelve hues at one perceptual lightness and chroma, plus two neutrals —
+// the "more colours" row of the picker, tuned per theme.
+function extendedColors(t) {
+  const hues = [20, 50, 80, 110, 140, 170, 200, 230, 260, 290, 320, 350];
+  return [
+    ...hues.map(h => oklchToHex(t.ring.L, t.ring.C, h)),
+    oklchToHex(t.light ? 0.35 : 0.93, 0, 0),
+    oklchToHex(t.light ? 0.6 : 0.7, 0, 0),
+  ];
+}
+
+// The recessive tint used for water between dots of a colour.
+const waterColor = (hex) => mixOklab(hex, theme().bg, WATER_MIX);
+const WATER_MIX = 0.55;   // 0 = the dot colour itself, 1 = the background
 
 // ---------------------------------------------------------------------------
 // Dates. Every date is a UTC-midnight timestamp so that day arithmetic is exact
@@ -271,31 +334,49 @@ function draw() {
   geo = { ox, oy, cols, rows, cell, r };
   const centre = (i) => [ox + (i % cols) * cell + cell / 2, oy + Math.floor(i / cols) * cell + cell / 2];
 
-  // Group dots by colour so the canvas changes fillStyle a handful of times, not thousands.
+  // A dot's region: the period on top of it, or the past/future base.
+  const ids = new Array(model.total);
+  for (let i = 0; i < model.total; i++) {
+    const c = model.covering[i];
+    ids[i] = c ? c[c.length - 1] : (i < model.cur ? 'past' : 'future');
+  }
+  // Group by region so each fillStyle is set once per region, not per dot.
   const groups = new Map();
   for (let i = 0; i < model.total; i++) {
-    const c = model.colors[i];
-    let arr = groups.get(c);
-    if (!arr) groups.set(c, (arr = []));
-    arr.push(i);
+    let g = groups.get(ids[i]);
+    if (!g) groups.set(ids[i], (g = { color: model.colors[i], idx: [] }));
+    g.idx.push(i);
   }
-  const topRange = (i) => { const c = model.covering[i]; return c ? c[c.length - 1] : null; };
-  const R = cell * 0.27;                   // radius of the concave meniscus arcs (smaller = thinner neck)
-  for (const [color, idx] of groups) {
-    ctx.fillStyle = color;
+
+  // Water: for each region, a concave lens between every orthogonal pair of
+  // neighbours plus a square between the centres of every 2x2 block. Together
+  // they fill the interior while the outer border stays scalloped. Everything
+  // is traced clockwise so overlaps add up under the nonzero fill rule.
+  if (state.link) {
+    const R = cell * 0.4;                  // meniscus radius: smaller = deeper scallops
+    for (const [id, g] of groups) {
+      ctx.fillStyle = waterColor(g.color);
+      ctx.beginPath();
+      for (const i of g.idx) {
+        const right = (i + 1) % cols !== 0 && i + 1 < model.total && ids[i + 1] === id;
+        const down = i + cols < model.total && ids[i + cols] === id;
+        const [cx, cy] = centre(i);
+        if (right) bridge(cx, cy, cx + cell, cy, r, R);
+        if (down) bridge(cx, cy, cx, cy + cell, r, R);
+        if (right && down && ids[i + cols + 1] === id) ctx.rect(cx, cy, cell, cell);
+      }
+      ctx.fill();
+    }
+  }
+
+  // Dots, on top of the water in their full colour.
+  for (const [, g] of groups) {
+    ctx.fillStyle = g.color;
     ctx.beginPath();
-    for (const i of idx) {
+    for (const i of g.idx) {
       const [cx, cy] = centre(i);
       ctx.moveTo(cx + r, cy);
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    }
-    if (state.link) {
-      for (const i of idx) {
-        const p = topRange(i);
-        if (!p) continue;
-        if ((i + 1) % cols !== 0 && i + 1 < model.total && topRange(i + 1) === p) bridge(...centre(i), ...centre(i + 1), r, R);
-        if (i + cols < model.total && topRange(i + cols) === p) bridge(...centre(i), ...centre(i + cols), r, R);
-      }
     }
     ctx.fill();
   }
@@ -331,17 +412,17 @@ function draw() {
   if (cur >= 0 && cur < model.total) drawFlag(...centre(cur), r, w);
 }
 
-// The region between two touching-distance dots bounded by their own circles and
-// two concave arcs of radius R tangent to both — the shape a water bridge makes.
-// It shares boundaries with the dots but never overlaps them, so it can live in
-// the same path regardless of winding direction.
+// The region between two neighbouring dots bounded by their own circles and two
+// concave arcs of radius R tangent to both — the shape a water bridge makes.
+// Traced clockwise, the same direction as arc() discs and rect(), so it can
+// share a path with them and overlaps add rather than cancel.
 function bridge(x1, y1, x2, y2, r, R) {
   const dx = x2 - x1, dy = y2 - y1;
   const d = Math.hypot(dx, dy);
   const half = d / 2;
   const hh = (r + R) ** 2 - half ** 2;
   if (hh <= 0) return;                     // dots too far apart for this R
-  const h = Math.sqrt(hh);                 // distance from the midpoint to a meniscus centre
+  const h = Math.sqrt(hh);                 // midpoint -> meniscus centre
   const ux = dx / d, uy = dy / d;          // along the pair
   const nx = -uy, ny = ux;                 // across it
   const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
@@ -349,13 +430,12 @@ function bridge(x1, y1, x2, y2, r, R) {
   const a = Math.atan2(h, half);           // half-angle the bridge occupies on each dot
   const c1x = mx + h * nx, c1y = my + h * ny;
   const c2x = mx - h * nx, c2y = my - h * ny;
-  // start at the tangent point on dot 1 nearest meniscus 1
   const k = r / (r + R);
-  ctx.moveTo(x1 + (c1x - x1) * k, y1 + (c1y - y1) * k);
-  ctx.arc(c1x, c1y, R, th - Math.PI + a, th - a);           // concave, over to dot 2
-  ctx.arc(x2, y2, r, th + Math.PI - a, th + Math.PI + a);   // along dot 2's edge
-  ctx.arc(c2x, c2y, R, th + a, th + Math.PI - a);           // concave, back to dot 1
-  ctx.arc(x1, y1, r, th - a, th + a);                       // along dot 1's edge
+  ctx.moveTo(x2 + (c1x - x2) * k, y2 + (c1y - y2) * k);          // tangent point on dot 2, meniscus 1 side
+  ctx.arc(c1x, c1y, R, th - a, th - Math.PI + a, true);           // meniscus 1 across to dot 1
+  ctx.arc(x1, y1, r, th + a, th - a, true);                       // along dot 1's edge
+  ctx.arc(c2x, c2y, R, th + Math.PI - a, th + a, true);           // meniscus 2 back to dot 2
+  ctx.arc(x2, y2, r, th + Math.PI + a, th + Math.PI - a, true);   // along dot 2's edge
   ctx.closePath();
 }
 
@@ -677,6 +757,7 @@ function buildEventRow(e, y0, y1) {
 // One popover shared by every colour button: the theme's presets plus a free picker.
 const colorPop = document.getElementById('colorpop');
 const colorPresets = colorPop.querySelector('.presets');
+const colorMore = colorPop.querySelector('.more');
 const colorCustom = colorPop.querySelector('input[type="color"]');
 const sheet = document.getElementById('sheet');
 let popTarget = null;   // { btn, item } while open
@@ -684,7 +765,7 @@ let popTarget = null;   // { btn, item } while open
 function openColorPop(btn, item) {
   if (popTarget && popTarget.btn === btn) return closeColorPop();
   popTarget = { btn, item };
-  colorPresets.replaceChildren(...theme().presets.map(c => {
+  const swatch = (c) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'pc' + (c === item.color ? ' on' : '');
@@ -692,7 +773,9 @@ function openColorPop(btn, item) {
     b.setAttribute('aria-label', c);
     b.addEventListener('click', () => { setItemColor(c); closeColorPop(); });
     return b;
-  }));
+  };
+  colorPresets.replaceChildren(...theme().presets.map(swatch));
+  colorMore.replaceChildren(...extendedColors(theme()).map(swatch));
   colorCustom.value = item.color;
   colorPop.hidden = false;
   // Position under the button, in the sheet's scrolling coordinate space.
@@ -707,7 +790,7 @@ function setItemColor(c) {
   if (!popTarget) return;
   popTarget.item.color = c;
   popTarget.btn.style.setProperty('--c', c);
-  for (const b of colorPresets.children) b.classList.toggle('on', b.style.getPropertyValue('--c') === c);
+  for (const b of colorPop.querySelectorAll('.pc')) b.classList.toggle('on', b.style.getPropertyValue('--c') === c);
   render();
 }
 

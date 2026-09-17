@@ -61,7 +61,7 @@
     <p class="hint">Colour stretches of your life — school, a job, a relationship, a country. Later periods paint over earlier ones.</p>
     <ul id="ranges" class="rows"></ul>
     <button id="add-range" type="button" class="secondary">+ Add period</button>
-    <label class="toggle"><input type="checkbox" id="link"> Join the dots of a period, like water drops</label>
+    <label class="toggle"><input type="checkbox" id="link"> Water: join the dots of each period</label>
 
     <h2>Dates</h2>
     <p class="hint">Mark a single week with a ring — a wedding, a loss, a move, a deadline. Rings sit on top of periods, so both stay visible.</p>
@@ -78,7 +78,8 @@
       <button id="reset" type="button" class="danger">Reset everything</button>
     </div>
     <div id="colorpop" hidden>
-      <div class="presets"></div>
+      <div class="presets" aria-label="Suggested colours"></div>
+      <div class="presets more" aria-label="More colours"></div>
       <label class="custom"><span>Custom</span><input type="color" aria-label="Custom colour"></label>
     </div>
 

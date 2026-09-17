@@ -27,10 +27,16 @@ and Kurzgesagt's [*What Are You Doing With Your Life?*](https://www.youtube.com/
   Paper. Each theme's default period colours were checked all-pairs, on that
   theme's own background, for colour-vision-deficiency and normal-vision
   separation. Those defaults are offered as swatches in the colour picker,
-  next to a free picker.
-- **Optional water-drop bridges.** Adjacent dots of the same period can be
-  joined by concave "meniscus" bridges (`?c=1`), so a period reads as one
-  beaded shape rather than a field of dots.
+  above a twelve-hue ring generated at one perceptual lightness for the
+  theme, and a free picker.
+- **Optional "water" (`?c=1`).** Each region — every period, and the past
+  and future too — is flooded with a recessive tint of its own colour, with
+  a scalloped, concave border between the outermost dots, as if a film of
+  water spanned them. The tint is the dot colour mixed 55 % toward the
+  theme's background in OKLab, so it recedes correctly on dark and light
+  themes alike. Geometrically the flood is the union of a concave lens
+  between every orthogonally adjacent pair and a square between the centres
+  of every 2×2 block, all traced clockwise into one path.
 - **Everything else is under one button.** The grid is the page; a floating
   action button opens the settings sheet.
 
@@ -49,7 +55,7 @@ and Kurzgesagt's [*What Are You Doing With Your Life?*](https://www.youtube.com/
 | `t` | theme: `dusk` (default, omitted), `ink`, `slate`, `paper` |
 | `r` | one period: `start~end~rrggbb~label`, repeatable; empty `end` = ongoing (until today) |
 | `d` | one date: `date~rrggbb~label`, repeatable; drawn as a ring |
-| `c` | `1` to join the dots of each period with water-drop bridges |
+| `c` | `1` to flood each region with water between its dots |
 
 Dates are entered through three native `<select>`s (day / month / year) rather
 than `<input type="date">`: on iOS that gives the wheel picker, elsewhere a
