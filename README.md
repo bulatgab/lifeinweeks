@@ -26,9 +26,9 @@ and Kurzgesagt's [*What Are You Doing With Your Life?*](https://www.youtube.com/
 - **Four themes.** Dusk (vivid, after the Kurzgesagt video), Ink, Slate and
   Paper. Each theme's default period colours were checked all-pairs, on that
   theme's own background, for colour-vision-deficiency and normal-vision
-  separation. Those defaults are offered as swatches in the colour picker,
-  above a twelve-hue ring generated at one perceptual lightness for the
-  theme, and a free picker.
+  separation. The picker shows those defaults, then a ring of hues generated
+  at one perceptual lightness for the theme, then a free picker — twenty
+  swatches in two rows for every theme.
 - **Optional "water" (`?c=1|2|3`).** Each region — every period, and the
   past and future too — is flooded with a recessive tint of its own colour:
   the dot colour mixed 55 % toward the theme's background in OKLab, so it
@@ -44,6 +44,11 @@ and Kurzgesagt's [*What Are You Doing With Your Life?*](https://www.youtube.com/
   tile without slivers.
 - **Reorderable.** Drag a row's grip (mouse or touch) or press the arrow keys
   on it to reorder periods and dates. Order is paint order.
+- **Image export.** "Save image" renders the chart plus the stats and legend
+  off-screen at 2–3× and hands it to the share sheet on touch devices (on
+  iOS that offers "Save Image") or downloads a PNG elsewhere.
+- **English and Russian.** Detected from the browser; an explicit choice is
+  stored as `?lang=`. Dates, numbers and plurals follow the language.
 - **Everything else is under one button.** The grid is the page; a floating
   action button opens the settings sheet.
 
@@ -62,7 +67,8 @@ and Kurzgesagt's [*What Are You Doing With Your Life?*](https://www.youtube.com/
 | `t` | theme: `dusk` (default, omitted), `ink`, `slate`, `paper` |
 | `r` | one period: `start~end~rrggbb~label`, repeatable; empty `end` = ongoing (until today) |
 | `d` | one date: `date~rrggbb~label`, repeatable; drawn as a ring |
-| `c` | water between the dots: `1` scalloped, `2` straight, `3` filled |
+| `c` | connect dots: `1` scalloped, `2` straight, `3` filled |
+| `lang` | `en` or `ru` (only written when chosen explicitly) |
 
 Dates are entered through three native `<select>`s (day / month / year) rather
 than `<input type="date">`: on iOS that gives the wheel picker, elsewhere a

@@ -16,11 +16,11 @@
   <canvas id="grid" aria-label="Your life in weeks, one dot per week"></canvas>
   <footer id="bar">
     <p id="stats" aria-live="polite"></p>
-    <ul id="legend" aria-label="Periods and dates"></ul>
+    <ul id="legend"></ul>
   </footer>
 </main>
 
-<button id="fab" type="button" aria-label="Open settings" aria-haspopup="dialog" aria-controls="panel">
+<button id="fab" type="button" data-i18n-aria="openSettings" aria-label="Open settings" aria-haspopup="dialog" aria-controls="panel">
   <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
     <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
       d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M20 18h0"/>
@@ -36,8 +36,12 @@
   <div id="backdrop"></div>
   <section id="sheet">
     <header>
-      <h1 id="panel-title">Your life in weeks</h1>
-      <button id="close" type="button" aria-label="Close settings">
+      <h1 id="panel-title" data-i18n="panelTitle">Your life in weeks</h1>
+      <div id="lang" class="seg mini" role="radiogroup" data-i18n-aria="language" aria-label="Language">
+        <label><input type="radio" name="lang" value="en"><span>EN</span></label>
+        <label><input type="radio" name="lang" value="ru"><span>RU</span></label>
+      </div>
+      <button id="close" type="button" data-i18n-aria="closeSettings" aria-label="Close settings">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
           <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
         </svg>
@@ -45,80 +49,80 @@
     </header>
 
     <div class="field">
-      <span class="label">Date of birth</span>
+      <span class="label" data-i18n="birth">Date of birth</span>
       <div class="date-field" id="birth"></div>
     </div>
     <div class="field">
-      <span class="label">Expected lifespan</span>
+      <span class="label" data-i18n="lifespan">Expected lifespan</span>
       <span class="with-unit">
-        <input type="number" id="years" min="1" max="150" step="1" inputmode="numeric" aria-label="Expected lifespan in years">
-        <span class="unit">years</span>
+        <input type="number" id="years" min="1" max="150" step="1" inputmode="numeric" data-i18n-aria="lifespan" aria-label="Expected lifespan">
+        <span class="unit" data-i18n="years">years</span>
       </span>
     </div>
     <p id="total-hint" class="hint"></p>
 
-    <h2>Periods</h2>
-    <p class="hint">Colour stretches of your life — school, a job, a relationship, a home. Later periods paint over earlier ones. Drag the grip to reorder.</p>
+    <h2 data-i18n="periods">Periods</h2>
+    <p class="hint" data-i18n="periodsHint"></p>
     <ul id="ranges" class="rows"></ul>
-    <button id="add-range" type="button" class="secondary">+ Add period</button>
-    
-    <h2>Dates</h2>
-    <p class="hint">Mark a single week with a ring — a wedding, a loss, a move, a deadline. Rings sit on top of periods, so both stay visible.</p>
+    <button id="add-range" type="button" class="secondary" data-i18n="addPeriod">+ Add period</button>
+
+    <h2 data-i18n="dates">Dates</h2>
+    <p class="hint" data-i18n="datesHint"></p>
     <ul id="events" class="rows"></ul>
-    <button id="add-event" type="button" class="secondary">+ Add date</button>
+    <button id="add-event" type="button" class="secondary" data-i18n="addDate">+ Add date</button>
 
-    <h2>Theme</h2>
-    <div id="themes" role="radiogroup" aria-label="Theme"></div>
+    <h2 data-i18n="theme">Theme</h2>
+    <div id="themes" role="radiogroup" data-i18n-aria="theme" aria-label="Theme"></div>
 
-    <h2>Connect dots</h2>
-    <div id="water" class="seg" role="radiogroup" aria-label="Connect dots">
-      <label><input type="radio" name="water" value="0" checked><span>Off</span></label>
-      <label><input type="radio" name="water" value="1"><span>Scalloped</span></label>
-      <label><input type="radio" name="water" value="2"><span>Straight</span></label>
-      <label><input type="radio" name="water" value="3"><span>Filled</span></label>
+    <h2 data-i18n="connect">Connect dots</h2>
+    <div id="water" class="seg" role="radiogroup" data-i18n-aria="connect" aria-label="Connect dots">
+      <label><input type="radio" name="water" value="0" checked><span data-i18n="water0">Off</span></label>
+      <label><input type="radio" name="water" value="1"><span data-i18n="water1">Scalloped</span></label>
+      <label><input type="radio" name="water" value="2"><span data-i18n="water2">Straight</span></label>
+      <label><input type="radio" name="water" value="3"><span data-i18n="water3">Filled</span></label>
     </div>
 
-    <h2>Saving</h2>
-    <p class="hint">There is no account and nothing is stored on any server or in your browser. Everything you enter is written into this page's address — bookmark it, or copy the link to keep it or open it on another device. Because the address <em>is</em> the data, re-save your bookmark after you change something.</p>
+    <h2 data-i18n="saving">Saving</h2>
+    <p class="hint" data-i18n-html="savingHint"></p>
     <div class="actions">
-      <button id="copy" type="button" class="primary">Copy link</button>
-      <button id="reset" type="button" class="danger">Reset everything</button>
+      <button id="copy" type="button" class="primary" data-i18n="copyLink">Copy link</button>
+      <button id="export" type="button" class="primary" data-i18n="saveImage">Save image</button>
+      <button id="reset" type="button" class="danger" data-i18n="reset">Reset everything</button>
     </div>
     <div id="colorpop" hidden>
-      <div class="presets" aria-label="Colours"></div>
-      <label class="custom"><span>Custom</span><input type="color" aria-label="Custom colour"></label>
+      <div class="presets"></div>
     </div>
 
-    <p class="hint credits">Inspired by <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) and <a href="https://www.youtube.com/watch?v=MBRqu0YOH14" target="_blank" rel="noopener">this Kurzgesagt video</a>. <a href="https://github.com/bulatgab/lifeinweeks" target="_blank" rel="noopener">Source</a>.</p>
+    <p class="hint credits" data-i18n-html="credits"></p>
   </section>
 </div>
 
 <template id="range-row">
   <li class="row">
     <div class="row-head">
-      <button type="button" class="r-grip" aria-label="Drag to reorder (or use arrow keys)">
+      <button type="button" class="r-grip" data-i18n-aria="drag">
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
           <circle cx="9" cy="6" r="1.6" fill="currentColor"/><circle cx="15" cy="6" r="1.6" fill="currentColor"/>
           <circle cx="9" cy="12" r="1.6" fill="currentColor"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/>
           <circle cx="9" cy="18" r="1.6" fill="currentColor"/><circle cx="15" cy="18" r="1.6" fill="currentColor"/>
         </svg>
       </button>
-      <button type="button" class="r-color" aria-label="Period colour" aria-haspopup="true"></button>
-      <input type="text" class="r-label" placeholder="Label (e.g. University)" maxlength="60" aria-label="Period label">
-      <button type="button" class="r-del" aria-label="Delete period">
+      <button type="button" class="r-color" data-i18n-aria="colour" aria-haspopup="true"></button>
+      <input type="text" class="r-label" maxlength="60" data-i18n-placeholder="labelPeriod">
+      <button type="button" class="r-del" data-i18n-aria="deletePeriod">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 7h14M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/>
         </svg>
       </button>
     </div>
     <div class="row-dates">
-      <span class="label">From</span>
+      <span class="label" data-i18n="from">From</span>
       <div class="date-field r-start"></div>
     </div>
     <div class="row-dates">
-      <span class="label">To</span>
+      <span class="label" data-i18n="to">To</span>
       <div class="date-field r-end"></div>
-      <label class="ongoing"><input type="checkbox" class="r-ongoing"> Ongoing</label>
+      <label class="ongoing"><input type="checkbox" class="r-ongoing"> <span data-i18n="ongoing">Ongoing</span></label>
     </div>
   </li>
 </template>
@@ -126,23 +130,23 @@
 <template id="event-row">
   <li class="row">
     <div class="row-head">
-      <button type="button" class="r-grip" aria-label="Drag to reorder (or use arrow keys)">
+      <button type="button" class="r-grip" data-i18n-aria="drag">
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
           <circle cx="9" cy="6" r="1.6" fill="currentColor"/><circle cx="15" cy="6" r="1.6" fill="currentColor"/>
           <circle cx="9" cy="12" r="1.6" fill="currentColor"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/>
           <circle cx="9" cy="18" r="1.6" fill="currentColor"/><circle cx="15" cy="18" r="1.6" fill="currentColor"/>
         </svg>
       </button>
-      <button type="button" class="r-color" aria-label="Date colour" aria-haspopup="true"></button>
-      <input type="text" class="r-label" placeholder="Label (e.g. Wedding)" maxlength="60" aria-label="Date label">
-      <button type="button" class="r-del" aria-label="Delete date">
+      <button type="button" class="r-color" data-i18n-aria="colour" aria-haspopup="true"></button>
+      <input type="text" class="r-label" maxlength="60" data-i18n-placeholder="labelDate">
+      <button type="button" class="r-del" data-i18n-aria="deleteDate">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 7h14M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/>
         </svg>
       </button>
     </div>
     <div class="row-dates">
-      <span class="label">On</span>
+      <span class="label" data-i18n="on">On</span>
       <div class="date-field r-date"></div>
     </div>
   </li>

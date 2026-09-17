@@ -1,34 +1,146 @@
-// Weeks — your life in weeks, one dot per week.
+// Life in Weeks — one dot per week.
 // No build step, no server, no storage: the whole state is the URL query string.
 
 const DAY = 86_400_000;
 const WEEK = 7 * DAY;
 const DEFAULT_YEARS = 80;
 const DEFAULT_THEME = 'dusk';
+const WATER_MIX = 0.55;   // water tint: 0 = the dot colour itself, 1 = the background
 
 // Each theme: surfaces, ink, the past/future base dots, the "today" dot, the
-// accent used for the FAB / buttons / TODAY flag, and the default colours
-// offered to new periods and dates. Every preset list was validated all-pairs
-// (together with past + future, on that theme's background) for colour-vision
-// deficiency and normal-vision separation.
+// accent used for the FAB / buttons / TODAY flag, the default colours offered
+// to new periods and dates (validated all-pairs, with past + future, on that
+// background, for colour-vision-deficiency and normal-vision separation) and
+// the parameters of the generated swatch ring.
 const THEMES = {
-  dusk:  { name: 'Dusk',  bg: '#1a0b2e', panel: '#24123d', ink: '#f4effa', past: '#5b2fa3', future: '#ff4370', today: '#30f0ff', accent: '#ff4370', onAccent: '#ffffff',
-           presets: ['#ffb340', '#22c9a8', '#4f9df9', '#f0f0f5', '#b45309'], ring: { L: 0.8, C: 0.17 } },
-  ink:   { name: 'Ink',   bg: '#141418', panel: '#1c1c22', ink: '#ececf0', past: '#2c2c34', future: '#b8b8c4', today: '#ff7a59', accent: '#ff7a59', onAccent: '#141418',
-           presets: ['#d4a017', '#5b8def', '#3fa7a0', '#bf616a', '#eceff4'], ring: { L: 0.78, C: 0.12 } },
-  slate: { name: 'Slate', bg: '#2e3440', panel: '#3b4252', ink: '#eceff4', past: '#4c566a', future: '#d8dee9', today: '#88c0d0', accent: '#88c0d0', onAccent: '#2e3440',
-           presets: ['#c1666b', '#5b8def', '#e6b450', '#5fb3a1'], ring: { L: 0.78, C: 0.12 } },
-  paper: { name: 'Paper', bg: '#f5f0e6', panel: '#fffdf8', ink: '#2a2a33', past: '#d3c9b8', future: '#3b3946', today: '#d9534f', accent: '#d9534f', onAccent: '#ffffff', light: true,
-           presets: ['#2f6b2f', '#a67c00', '#4f74a8', '#b0417a', '#7c3aed'], ring: { L: 0.52, C: 0.13 } },
+  dusk:  { bg: '#1a0b2e', panel: '#24123d', ink: '#f4effa', past: '#5b2fa3', future: '#ff4370', today: '#30f0ff', accent: '#ff4370', onAccent: '#ffffff',
+           presets: ['#ffb340', '#22c9a8', '#4f9df9', '#f0f0f5', '#b45309'], ring: { L: 0.8, C: 0.17, hues: 12 } },
+  ink:   { bg: '#141418', panel: '#1c1c22', ink: '#ececf0', past: '#2c2c34', future: '#b8b8c4', today: '#ff7a59', accent: '#ff7a59', onAccent: '#141418',
+           presets: ['#d4a017', '#5b8def', '#3fa7a0', '#bf616a', '#eceff4'], ring: { L: 0.78, C: 0.12, hues: 12 } },
+  slate: { bg: '#2e3440', panel: '#3b4252', ink: '#eceff4', past: '#4c566a', future: '#d8dee9', today: '#88c0d0', accent: '#88c0d0', onAccent: '#2e3440',
+           presets: ['#c1666b', '#5b8def', '#e6b450', '#5fb3a1'], ring: { L: 0.78, C: 0.12, hues: 13 } },
+  paper: { bg: '#f5f0e6', panel: '#fffdf8', ink: '#2a2a33', past: '#d3c9b8', future: '#3b3946', today: '#d9534f', accent: '#d9534f', onAccent: '#ffffff', light: true,
+           presets: ['#2f6b2f', '#a67c00', '#4f74a8', '#b0417a', '#7c3aed'], ring: { L: 0.52, C: 0.13, hues: 12 } },
 };
+
+// ---------------------------------------------------------------------------
+// Text. Every user-facing string lives here; static HTML carries data-i18n
+// hooks, JS-built text calls t().
+// ---------------------------------------------------------------------------
+
+const I18N = {
+  en: {
+    locale: 'en-GB',
+    title: 'Life in Weeks',
+    panelTitle: 'Your life in weeks',
+    openSettings: 'Open settings', closeSettings: 'Close settings', language: 'Language',
+    birth: 'Date of birth', lifespan: 'Expected lifespan', years: 'years',
+    totalHint: (total, left) => `${total} weeks in total; ${left} still ahead.`,
+    periods: 'Periods',
+    periodsHint: 'Colour stretches of your life — school, a job, a relationship, a home. Later periods paint over earlier ones. Drag the grip to reorder.',
+    noPeriods: 'No periods yet.', addPeriod: '+ Add period',
+    dates: 'Dates',
+    datesHint: 'Mark a single week with a ring — a wedding, a loss, a move, a deadline. Rings sit on top of periods, so both stay visible.',
+    noDates: 'No dates yet.', addDate: '+ Add date',
+    theme: 'Theme', themes: { dusk: 'Dusk', ink: 'Ink', slate: 'Slate', paper: 'Paper' },
+    connect: 'Connect dots', water0: 'Off', water1: 'Scalloped', water2: 'Straight', water3: 'Filled',
+    saving: 'Saving',
+    savingHint: 'There is no account and nothing is stored on any server or in your browser. Everything you enter is written into this page’s address — bookmark it, or copy the link to keep it or open it on another device. Because the address <em>is</em> the data, re-save your bookmark after you change something.',
+    copyLink: 'Copy link', copied: 'Copied!', copyFail: 'Copy from the address bar',
+    saveImage: 'Save image', reset: 'Reset everything',
+    credits: 'Inspired by <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) and <a href="https://www.youtube.com/watch?v=MBRqu0YOH14" target="_blank" rel="noopener">this Kurzgesagt video</a>. <a href="https://github.com/bulatgab/lifeinweeks" target="_blank" rel="noopener">Source</a>.',
+    labelPeriod: 'Label (e.g. University)', labelDate: 'Label (e.g. Wedding)',
+    from: 'From', to: 'To', on: 'On', ongoing: 'Ongoing',
+    deletePeriod: 'Delete period', deleteDate: 'Delete date',
+    drag: 'Drag to reorder (or use the arrow keys)', colour: 'Colour', customColour: 'Custom colour',
+    day: 'Day', month: 'Month', year: 'Year',
+    stats: (lived, left, pct, total) => `<b>${lived}</b> weeks lived · <b>${left}</b> left · ${pct}% of ${total}`,
+    statsEmpty: 'One dot per week. <b>Tap the button to begin.</b>',
+    placeholder: 'Set your date of birth to see your weeks',
+    today: 'TODAY',
+    weekOf: (n, total) => `Week ${n} of ${total}`,
+    lived: 'lived', thisWeek: 'this week', ahead: 'ahead', age: (a) => `age ${a}`,
+    untitledPeriod: 'Untitled period', untitledDate: 'Untitled date', now: 'now',
+    past: 'Past', future: 'Future',
+    imageName: 'life-in-weeks.png',
+  },
+  ru: {
+    locale: 'ru-RU',
+    title: 'Жизнь в неделях',
+    panelTitle: 'Ваша жизнь в неделях',
+    openSettings: 'Открыть настройки', closeSettings: 'Закрыть настройки', language: 'Язык',
+    birth: 'Дата рождения', lifespan: 'Ожидаемая продолжительность жизни', years: 'лет',
+    totalHint: (total, left, w) => `Всего ${total} ${w(total)}; впереди ещё ${left}.`,
+    periods: 'Периоды',
+    periodsHint: 'Раскрасьте отрезки жизни — школу, работу, отношения, дом. Поздние периоды перекрывают ранние. Порядок можно менять перетаскиванием.',
+    noPeriods: 'Периодов пока нет.', addPeriod: '+ Добавить период',
+    dates: 'Даты',
+    datesHint: 'Отметьте одну неделю кольцом — свадьбу, утрату, переезд, дедлайн. Кольца рисуются поверх периодов, так что видно и то и другое.',
+    noDates: 'Дат пока нет.', addDate: '+ Добавить дату',
+    theme: 'Тема', themes: { dusk: 'Сумерки', ink: 'Чернила', slate: 'Графит', paper: 'Бумага' },
+    connect: 'Соединить точки', water0: 'Нет', water1: 'Волной', water2: 'Прямо', water3: 'Заливкой',
+    saving: 'Сохранение',
+    savingHint: 'Ни аккаунта, ни сервера, ни хранения в браузере. Всё, что вы вводите, записывается в адрес этой страницы — добавьте его в закладки или скопируйте ссылку, чтобы сохранить или открыть на другом устройстве. Адрес <em>и есть</em> данные, поэтому после изменений сохраните закладку заново.',
+    copyLink: 'Скопировать ссылку', copied: 'Скопировано!', copyFail: 'Скопируйте из адресной строки',
+    saveImage: 'Сохранить картинку', reset: 'Сбросить всё',
+    credits: 'По мотивам статьи <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) и <a href="https://www.youtube.com/watch?v=MBRqu0YOH14" target="_blank" rel="noopener">видео Kurzgesagt</a>. <a href="https://github.com/bulatgab/lifeinweeks" target="_blank" rel="noopener">Исходный код</a>.',
+    labelPeriod: 'Название (например, Университет)', labelDate: 'Название (например, Свадьба)',
+    from: 'С', to: 'По', on: 'Когда', ongoing: 'По сей день',
+    deletePeriod: 'Удалить период', deleteDate: 'Удалить дату',
+    drag: 'Перетащите, чтобы изменить порядок (или используйте стрелки)', colour: 'Цвет', customColour: 'Свой цвет',
+    day: 'День', month: 'Месяц', year: 'Год',
+    stats: (lived, left, pct, total, w) => `<b>${lived}</b> ${w(lived)} прожито · <b>${left}</b> осталось · ${pct}% из ${total}`,
+    statsEmpty: 'Одна точка — одна неделя. <b>Нажмите кнопку, чтобы начать.</b>',
+    placeholder: 'Укажите дату рождения, чтобы увидеть свои недели',
+    today: 'СЕГОДНЯ',
+    weekOf: (n, total) => `Неделя ${n} из ${total}`,
+    lived: 'прожита', thisWeek: 'текущая', ahead: 'впереди', age: (a) => `возраст ${a}`,
+    untitledPeriod: 'Период без названия', untitledDate: 'Дата без названия', now: 'сейчас',
+    past: 'Прошлое', future: 'Будущее',
+    imageName: 'life-in-weeks.png',
+  },
+};
+
+const t = (key, ...args) => {
+  const v = I18N[state.lang][key];
+  return typeof v === 'function' ? v(...args, weeksWord) : v;
+};
+
+// "week" / "weeks" — Russian needs one/few/many.
+function weeksWord(n) {
+  if (state.lang === 'ru') {
+    const f = new Intl.PluralRules('ru').select(n);
+    return f === 'one' ? 'неделя' : f === 'few' ? 'недели' : 'недель';
+  }
+  return n === 1 ? 'week' : 'weeks';
+}
+
+const detectLang = () => (navigator.language || '').toLowerCase().startsWith('ru') ? 'ru' : 'en';
+
+// Formatters follow the language.
+const fmt = { lang: null };
+function formatters() {
+  if (fmt.lang !== state.lang) {
+    const loc = I18N[state.lang].locale;
+    fmt.lang = state.lang;
+    fmt.date = new Intl.DateTimeFormat(loc, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+    fmt.month = new Intl.DateTimeFormat(loc, { month: 'short', timeZone: 'UTC' });
+    fmt.int = new Intl.NumberFormat(loc);
+  }
+  return fmt;
+}
+const fmtDate = (ts) => formatters().date.format(ts);
+const fmtInt = (n) => formatters().int.format(n);
+const fmtMonth = (m1) => formatters().month.format(Date.UTC(2000, m1 - 1, 1)).replace(/\.$/, '');
 
 // ---------------------------------------------------------------------------
 // Colour maths in OKLab (Björn Ottosson's perceptual space). Used to derive the
 // recessive "water" tint from any dot colour by mixing it toward the theme's
 // background — the same operation design systems use to build tonal scales —
-// and to generate the extended swatch ring at a uniform lightness/chroma.
+// and to generate the swatch ring at a uniform lightness/chroma.
 // ---------------------------------------------------------------------------
 
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const hexToRgb = (hex) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => v / 255); };
 const rgbToHex = (rgb) => '#' + rgb.map(v => Math.round(clamp(v, 0, 1) * 255).toString(16).padStart(2, '0')).join('');
 const toLin = (c) => c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
@@ -55,9 +167,9 @@ function oklabToLinear([L, a, b]) {
 
 const oklabToHex = (lab) => rgbToHex(oklabToLinear(lab).map(v => fromLin(clamp(v, 0, 1))));
 
-function mixOklab(hexA, hexB, t) {
+function mixOklab(hexA, hexB, k) {
   const A = rgbToOklab(hexToRgb(hexA)), B = rgbToOklab(hexToRgb(hexB));
-  return oklabToHex(A.map((v, i) => v + (B[i] - v) * t));
+  return oklabToHex(A.map((v, i) => v + (B[i] - v) * k));
 }
 
 // OKLCH -> hex, pulling chroma in until the colour fits the sRGB gamut.
@@ -70,20 +182,19 @@ function oklchToHex(L, C, h) {
   return oklabToHex([L, 0, 0]);
 }
 
-// Twelve hues at one perceptual lightness and chroma, plus two neutrals —
+// A ring of hues at one perceptual lightness and chroma, plus two neutrals —
 // shown in the picker after the theme's validated presets, tuned per theme.
-function extendedColors(t) {
-  const hues = [20, 50, 80, 110, 140, 170, 200, 230, 260, 290, 320, 350];
+function extendedColors(th) {
+  const n = th.ring.hues;
+  const hues = Array.from({ length: n }, (_, i) => 20 + (360 * i) / n);
   return [
-    ...hues.map(h => oklchToHex(t.ring.L, t.ring.C, h)),
-    oklchToHex(t.light ? 0.35 : 0.93, 0, 0),
-    oklchToHex(t.light ? 0.6 : 0.7, 0, 0),
+    ...hues.map(h => oklchToHex(th.ring.L, th.ring.C, h)),
+    oklchToHex(th.light ? 0.35 : 0.93, 0, 0),
+    oklchToHex(th.light ? 0.6 : 0.7, 0, 0),
   ];
 }
 
-// The recessive tint used for water between dots of a colour.
 const waterColor = (hex) => mixOklab(hex, theme().bg, WATER_MIX);
-const WATER_MIX = 0.55;   // 0 = the dot colour itself, 1 = the background
 
 // ---------------------------------------------------------------------------
 // Dates. Every date is a UTC-midnight timestamp so that day arithmetic is exact
@@ -94,29 +205,28 @@ function parseISO(s) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
   if (!m) return null;
   const [y, mo, d] = [+m[1], +m[2], +m[3]];
-  const t = Date.UTC(y, mo - 1, d);
-  const back = new Date(t);
-  // Reject dates that "rolled over" (e.g. 2023-02-31 -> March 3rd).
+  const ts = Date.UTC(y, mo - 1, d);
+  const back = new Date(ts);
   if (back.getUTCFullYear() !== y || back.getUTCMonth() !== mo - 1 || back.getUTCDate() !== d) return null;
-  return t;
+  return ts;
 }
 
-const toISO = (t) => new Date(t).toISOString().slice(0, 10);
+const toISO = (ts) => new Date(ts).toISOString().slice(0, 10);
 
 function todayUTC() {
   const d = new Date();
   return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-function addYears(t, years) {
-  const d = new Date(t);
+function addYears(ts, years) {
+  const d = new Date(ts);
   return Date.UTC(d.getUTCFullYear() + years, d.getUTCMonth(), d.getUTCDate());
 }
 
-const daysInMonth = (y, m1) => new Date(Date.UTC(y, m1, 0)).getUTCDate();   // m1 = 1..12
+const daysInMonth = (y, m1) => new Date(Date.UTC(y, m1, 0)).getUTCDate();
 
-function ageAt(birth, t) {
-  const b = new Date(birth), d = new Date(t);
+function ageAt(birth, ts) {
+  const b = new Date(birth), d = new Date(ts);
   let age = d.getUTCFullYear() - b.getUTCFullYear();
   const beforeBirthday =
     d.getUTCMonth() < b.getUTCMonth() ||
@@ -124,24 +234,20 @@ function ageAt(birth, t) {
   return beforeBirthday ? age - 1 : age;
 }
 
-const fmtDate = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
-const fmtMonth = new Intl.DateTimeFormat(undefined, { month: 'short', timeZone: 'UTC' });
-const fmtInt = new Intl.NumberFormat(undefined);
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-
 // ---------------------------------------------------------------------------
 // State <-> URL
-//   ?b=1990-01-01&l=80&t=slate
+//   ?b=1990-01-01&l=80&t=slate&c=2&lang=ru
 //    &r=2008-09-01~2013-06-30~ffb340~University   (period; empty end = ongoing)
 //    &d=2015-08-22~22c9a8~Wedding                 (single date, drawn as a ring)
-//    &c=1                                          (water between dots: 1 scalloped, 2 straight, 3 filled)
 // ---------------------------------------------------------------------------
 
 const state = {
-  birth: null,        // UTC ts | null
+  birth: null,
   years: DEFAULT_YEARS,
   theme: DEFAULT_THEME,
-  water: 0,           // 0 off · 1 scalloped (menisci) · 2 straight (tangent to dots) · 3 filled (whole cells)
+  water: 0,           // 0 off · 1 scalloped · 2 straight · 3 filled
+  lang: detectLang(),
+  langExplicit: false, // only an explicit choice is written to the URL
   ranges: [],         // { start: ts|null, end: ts|null, color, label }
   events: [],         // { date: ts, color, label }
 };
@@ -155,6 +261,7 @@ function readURL() {
   state.years = Number.isFinite(l) ? clamp(l, 1, 150) : DEFAULT_YEARS;
   state.theme = THEMES[p.get('t')] ? p.get('t') : DEFAULT_THEME;
   state.water = ['1', '2', '3'].includes(p.get('c')) ? +p.get('c') : 0;
+  if (I18N[p.get('lang')]) { state.lang = p.get('lang'); state.langExplicit = true; }
   state.ranges = p.getAll('r').map(decodeRange).filter(Boolean);
   state.events = p.getAll('d').map(decodeEvent).filter(Boolean);
 }
@@ -170,9 +277,9 @@ function decodeRange(s) {
 
 function decodeEvent(s) {
   const [date, color, ...rest] = s.split('~');
-  const t = parseISO(date);
-  if (t === null) return null;
-  return { date: t, color: parseColor(color, theme().presets[0]), label: rest.join('~') };
+  const ts = parseISO(date);
+  if (ts === null) return null;
+  return { date: ts, color: parseColor(color, theme().presets[0]), label: rest.join('~') };
 }
 
 const encLabel = (s) => encodeURIComponent(s).replace(/~/g, '%7E');
@@ -183,6 +290,7 @@ function writeURL() {
   if (state.years !== DEFAULT_YEARS) parts.push('l=' + state.years);
   if (state.theme !== DEFAULT_THEME) parts.push('t=' + state.theme);
   if (state.water) parts.push('c=' + state.water);
+  if (state.langExplicit) parts.push('lang=' + state.lang);
   for (const r of state.ranges) {
     if (r.start === null) continue;
     parts.push('r=' + [toISO(r.start), r.end === null ? '' : toISO(r.end), r.color.slice(1), encLabel(r.label)].join('~'));
@@ -195,21 +303,21 @@ function writeURL() {
 }
 
 // ---------------------------------------------------------------------------
-// Theme
+// Theme & language
 // ---------------------------------------------------------------------------
 
 function applyTheme() {
-  const t = theme();
+  const th = theme();
   const s = document.documentElement.style;
-  s.setProperty('--bg', t.bg);
-  s.setProperty('--bg-2', t.panel);
-  s.setProperty('--ink', t.ink);
-  s.setProperty('--accent', t.accent);
-  s.setProperty('--on-accent', t.onAccent);
-  s.setProperty('--today', t.today);
-  s.colorScheme = t.light ? 'light' : 'dark';
-  document.querySelector('meta[name="theme-color"]').content = t.bg;
-  document.querySelector('meta[name="color-scheme"]').content = t.light ? 'light' : 'dark';
+  s.setProperty('--bg', th.bg);
+  s.setProperty('--bg-2', th.panel);
+  s.setProperty('--ink', th.ink);
+  s.setProperty('--accent', th.accent);
+  s.setProperty('--on-accent', th.onAccent);
+  s.setProperty('--today', th.today);
+  s.colorScheme = th.light ? 'light' : 'dark';
+  document.querySelector('meta[name="theme-color"]').content = th.bg;
+  document.querySelector('meta[name="color-scheme"]').content = th.light ? 'light' : 'dark';
 }
 
 // Switching theme: colours that were one of the old theme's presets follow to
@@ -229,25 +337,39 @@ function nextPreset() {
   return p.find(c => !used.has(c)) || p[(state.ranges.length + state.events.length) % p.length];
 }
 
+function applyLang() {
+  document.documentElement.lang = state.lang;
+  document.title = t('title');
+  for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
+  for (const el of document.querySelectorAll('[data-i18n-html]')) el.innerHTML = t(el.dataset.i18nHtml);
+  for (const el of document.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
+  for (const el of document.querySelectorAll('[data-i18n-placeholder]')) el.placeholder = t(el.dataset.i18nPlaceholder);
+  for (const tpl of document.querySelectorAll('template')) {
+    for (const el of tpl.content.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
+    for (const el of tpl.content.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
+    for (const el of tpl.content.querySelectorAll('[data-i18n-placeholder]')) el.placeholder = t(el.dataset.i18nPlaceholder);
+  }
+  document.querySelector(`#lang input[value="${state.lang}"]`).checked = true;
+}
+
 // ---------------------------------------------------------------------------
 // Model: which week is which colour
 // ---------------------------------------------------------------------------
 
 function computeModel() {
   if (state.birth === null) return null;
-  const t = theme();
+  const th = theme();
   const birth = state.birth;
   const death = addYears(birth, state.years);
   const total = Math.max(1, Math.floor((death - birth) / WEEK));
   const today = todayUTC();
   const weekOf = (ts) => Math.floor((ts - birth) / WEEK);
-  const cur = weekOf(today);              // may be < 0 or >= total
+  const cur = weekOf(today);
 
   const colors = new Array(total);
-  for (let i = 0; i < total; i++) colors[i] = i < cur ? t.past : t.future;
+  for (let i = 0; i < total; i++) colors[i] = i < cur ? th.past : th.future;
 
-  // Period coverage in list order, so later periods paint over earlier ones.
-  const covering = new Array(total);      // week -> [range, ...] for the tooltip
+  const covering = new Array(total);
   for (const r of state.ranges) {
     if (r.start === null) continue;
     const endT = r.end === null ? today : r.end;
@@ -260,7 +382,7 @@ function computeModel() {
     }
   }
 
-  const marks = new Array(total);         // week -> [event, ...]
+  const marks = new Array(total);
   for (const e of state.events) {
     const w = weekOf(e.date);
     if (w >= 0 && w < total) (marks[w] ||= []).push(e);
@@ -270,17 +392,14 @@ function computeModel() {
   return { birth, death, total, today, cur, lived, left: total - lived, colors, covering, marks, weekOf };
 }
 
-// ---------------------------------------------------------------------------
-// Layout: the densest grid of n square cells that fits a W x H box.
-// ---------------------------------------------------------------------------
-
+// The densest grid of n square cells that fits a W x H box.
 function bestGrid(n, W, H) {
   let best = { cols: 1, rows: n, cell: 0 };
   for (let cols = 1; cols <= n; cols++) {
     const rows = Math.ceil(n / cols);
     const cell = Math.min(W / cols, H / rows);
     if (cell > best.cell) best = { cols, rows, cell };
-    if (W / cols < best.cell) break;      // cells only get narrower from here
+    if (W / cols < best.cell) break;
   }
   return best;
 }
@@ -296,10 +415,9 @@ const legendEl = document.getElementById('legend');
 const tipEl = document.getElementById('tip');
 
 let model = null;
-let geo = null;   // { ox, oy, cols, rows, cell, r } of the last draw, for hit-testing
+let geo = null;   // layout of the last on-screen draw, for hit-testing
 
 function draw() {
-  const t = theme();
   const rect = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
   const w = Math.max(1, Math.round(rect.width));
@@ -310,37 +428,40 @@ function draw() {
   }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  geo = null;
+  geo = paintGrid(ctx, w, h);
+}
 
+// Paints the whole chart into any 2D context, w x h in CSS pixels. Returns the
+// layout so the caller can hit-test. Shared by the screen and the image export.
+function paintGrid(c, w, h) {
+  const th = theme();
   if (!model) {
-    ctx.fillStyle = t.ink;
-    ctx.globalAlpha = 0.55;
-    ctx.font = '500 15px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('Set your date of birth to see your weeks', w / 2, h / 2);
-    ctx.globalAlpha = 1;
-    return;
+    c.fillStyle = th.ink;
+    c.globalAlpha = 0.55;
+    c.font = '500 15px system-ui, sans-serif';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(t('placeholder'), w / 2, h / 2);
+    c.globalAlpha = 1;
+    return null;
   }
 
   const pad = 14;
-  const top = 30;                          // room for the TODAY flag on row 0
+  const top = 30;
   const W = Math.max(1, w - pad * 2);
   const H = Math.max(1, h - pad - top);
   const { cols, rows, cell } = bestGrid(model.total, W, H);
   const ox = pad + (W - cols * cell) / 2;
   const oy = top + (H - rows * cell) / 2;
   const r = cell * 0.36;
-  geo = { ox, oy, cols, rows, cell, r };
   const centre = (i) => [ox + (i % cols) * cell + cell / 2, oy + Math.floor(i / cols) * cell + cell / 2];
 
   // A dot's region: the period on top of it, or the past/future base.
   const ids = new Array(model.total);
   for (let i = 0; i < model.total; i++) {
-    const c = model.covering[i];
-    ids[i] = c ? c[c.length - 1] : (i < model.cur ? 'past' : 'future');
+    const cv = model.covering[i];
+    ids[i] = cv ? cv[cv.length - 1] : (i < model.cur ? 'past' : 'future');
   }
-  // Group by region so each fillStyle is set once per region, not per dot.
   const groups = new Map();
   for (let i = 0; i < model.total; i++) {
     let g = groups.get(ids[i]);
@@ -350,78 +471,77 @@ function draw() {
 
   // Water: one path per region, filled once.
   //   scalloped — a concave lens between neighbours + a square per 2x2 block
-  //               (a union of clockwise primitives)
-  //   straight  — the region's outline, offset inward so its edges run tangent
-  //               to the dots, every corner filleted with the dot radius
+  //   straight  — the region's outline offset inward to run tangent to the
+  //               dots, every corner filleted with the dot radius
   //   filled    — the outline of the whole cells, corners filleted, so that
-  //               neighbouring regions tile (a convex fillet on one side is the
-  //               concave fillet on the other)
+  //               neighbouring regions tile
   if (state.water) {
     const style = state.water;
-    const R = cell * 0.4;                              // meniscus radius (scalloped)
+    const R = cell * 0.4;
     for (const [id, g] of groups) {
-      ctx.fillStyle = waterColor(g.color);
-      ctx.beginPath();
+      c.fillStyle = waterColor(g.color);
+      c.beginPath();
       if (style === 1) {
         for (const i of g.idx) {
           const right = (i + 1) % cols !== 0 && i + 1 < model.total && ids[i + 1] === id;
           const down = i + cols < model.total && ids[i + cols] === id;
           const [cx, cy] = centre(i);
-          if (right) bridge(cx, cy, cx + cell, cy, r, R);
-          if (down) bridge(cx, cy, cx, cy + cell, r, R);
-          if (right && down && ids[i + cols + 1] === id) ctx.rect(cx, cy, cell, cell);
+          if (right) bridge(c, cx, cy, cx + cell, cy, r, R);
+          if (down) bridge(c, cx, cy, cx, cy + cell, r, R);
+          if (right && down && ids[i + cols + 1] === id) c.rect(cx, cy, cell, cell);
         }
       } else {
         const loops = traceRegion(g.idx, (j) => ids[j] === id, cols, model.total);
-        const inset = style === 2 ? cell / 2 - r : -0.5;   // filled grows by half a pixel so touching tiles overdraw their seam
+        const inset = style === 2 ? cell / 2 - r : -0.5;
         const rho = style === 2 ? r : cell * 0.25;
-        for (const loop of loops) roundedOutline(loop, ox, oy, cell, inset, rho);
+        for (const loop of loops) roundedOutline(c, loop, ox, oy, cell, inset, rho);
       }
-      ctx.fill();
+      c.fill();
     }
   }
 
   // Dots, on top of the water in their full colour.
   for (const [, g] of groups) {
-    ctx.fillStyle = g.color;
-    ctx.beginPath();
+    c.fillStyle = g.color;
+    c.beginPath();
     for (const i of g.idx) {
       const [cx, cy] = centre(i);
-      ctx.moveTo(cx + r, cy);
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      c.moveTo(cx + r, cy);
+      c.arc(cx, cy, r, 0, Math.PI * 2);
     }
-    ctx.fill();
+    c.fill();
   }
 
-  // Today: a brighter dot with a glow and a small flag.
+  // Today: a brighter dot with a glow.
   const cur = model.cur;
   if (cur >= 0 && cur < model.total) {
     const [cx, cy] = centre(cur);
-    ctx.save();
-    ctx.shadowColor = t.today;
-    ctx.shadowBlur = Math.max(6, r * 2.5);
-    ctx.fillStyle = t.today;
-    ctx.beginPath();
-    ctx.arc(cx, cy, Math.max(r * 1.15, 2.2), 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    c.save();
+    c.shadowColor = th.today;
+    c.shadowBlur = Math.max(6, r * 2.5);
+    c.fillStyle = th.today;
+    c.beginPath();
+    c.arc(cx, cy, Math.max(r * 1.15, 2.2), 0, Math.PI * 2);
+    c.fill();
+    c.restore();
   }
 
-  // Single dates: a ring in the gap around the dot, so the dot's own colour stays visible.
+  // Single dates: a ring around the dot.
   const lw = Math.max(2, cell * 0.14);
   const ringR = Math.min(r + lw / 2, cell / 2 - lw / 2);
-  ctx.lineWidth = lw;
+  c.lineWidth = lw;
   for (let i = 0; i < model.total; i++) {
     const evs = model.marks[i];
     if (!evs) continue;
     const [cx, cy] = centre(i);
-    ctx.strokeStyle = evs[evs.length - 1].color;
-    ctx.beginPath();
-    ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
-    ctx.stroke();
+    c.strokeStyle = evs[evs.length - 1].color;
+    c.beginPath();
+    c.arc(cx, cy, ringR, 0, Math.PI * 2);
+    c.stroke();
   }
 
-  if (cur >= 0 && cur < model.total) drawFlag(...centre(cur), r, w);
+  if (cur >= 0 && cur < model.total) drawFlag(c, ...centre(cur), r, w);
+  return { ox, oy, cols, rows, cell, r };
 }
 
 // The boundary of a set of grid cells as closed loops of grid-corner vertices
@@ -430,8 +550,8 @@ function draw() {
 // Collinear vertices are merged, so consecutive edges are always perpendicular.
 function traceRegion(cells, inRegion, cols, total) {
   const W = cols + 1;
-  const key = (c, r) => r * W + c;
-  const edges = new Map();                    // start vertex -> [{ to, dir }]
+  const key = (cc, rr) => rr * W + cc;
+  const edges = new Map();
   const add = (c0, r0, c1, r1, dir) => {
     const k = key(c0, r0);
     let a = edges.get(k);
@@ -439,11 +559,11 @@ function traceRegion(cells, inRegion, cols, total) {
     a.push({ to: key(c1, r1), dir });
   };
   for (const i of cells) {
-    const c = i % cols, r = (i - c) / cols;
-    if (!(r > 0 && inRegion(i - cols))) add(c, r, c + 1, r, 0);                           // top edge, heading right
-    if (!(c + 1 < cols && i + 1 < total && inRegion(i + 1))) add(c + 1, r, c + 1, r + 1, 1); // right edge, heading down
-    if (!(i + cols < total && inRegion(i + cols))) add(c + 1, r + 1, c, r + 1, 2);         // bottom edge, heading left
-    if (!(c > 0 && inRegion(i - 1))) add(c, r + 1, c, r, 3);                                // left edge, heading up
+    const cc = i % cols, rr = (i - cc) / cols;
+    if (!(rr > 0 && inRegion(i - cols))) add(cc, rr, cc + 1, rr, 0);
+    if (!(cc + 1 < cols && i + 1 < total && inRegion(i + 1))) add(cc + 1, rr, cc + 1, rr + 1, 1);
+    if (!(i + cols < total && inRegion(i + cols))) add(cc + 1, rr + 1, cc, rr + 1, 2);
+    if (!(cc > 0 && inRegion(i - 1))) add(cc, rr + 1, cc, rr, 3);
   }
   const loops = [];
   for (const [start, list] of edges) {
@@ -453,8 +573,6 @@ function traceRegion(cells, inRegion, cols, total) {
       for (;;) {
         const out = edges.get(k);
         if (!out || !out.length) break;
-        // At a pinch point (two outgoing edges) prefer the right turn, then
-        // straight, then left, so loops never cross themselves.
         let pick = 0;
         if (dir >= 0 && out.length > 1) {
           for (const want of [(dir + 1) % 4, dir, (dir + 3) % 4]) {
@@ -468,7 +586,6 @@ function traceRegion(cells, inRegion, cols, total) {
         k = e.to;
         if (k === start) break;
       }
-      // drop the start vertex if the loop merely passes straight through it
       if (loop.length >= 4) {
         const [a, b, z] = [loop[0], loop[1], loop[loop.length - 1]];
         if ((a[0] === b[0] && a[0] === z[0]) || (a[1] === b[1] && a[1] === z[1])) loop.shift();
@@ -479,126 +596,117 @@ function traceRegion(cells, inRegion, cols, total) {
   return loops;
 }
 
-// Add one traced loop to the current path: vertices converted to pixels,
-// each edge pushed `inset` toward the region (negative grows it), and every
-// corner — convex or concave — replaced by an arc of radius rho.
-function roundedOutline(loop, x0, y0, cell, inset, rho) {
+// Add one traced loop to the path: vertices converted to pixels, each edge
+// pushed `inset` toward the region (negative grows it), and every corner —
+// convex or concave — replaced by an arc of radius rho.
+function roundedOutline(c, loop, x0, y0, cell, inset, rho) {
   const n = loop.length;
   const pts = new Array(n);
   for (let i = 0; i < n; i++) {
-    const [c, r] = loop[i];
+    const [cc, rr] = loop[i];
     const [pc, pr] = loop[(i + n - 1) % n];
     const [nc, nr] = loop[(i + 1) % n];
-    // The region lies to the right of travel. A horizontal edge shifts in y, a
-    // vertical one in x; the vertex takes x from its vertical edge and y from
-    // its horizontal one.
-    let x = x0 + c * cell, y = y0 + r * cell;
-    if (pr === r) y += (c > pc ? 1 : -1) * inset; else x += (r > pr ? -1 : 1) * inset;   // incoming edge
-    if (nr === r) y += (nc > c ? 1 : -1) * inset; else x += (nr > r ? -1 : 1) * inset;   // outgoing edge
+    let x = x0 + cc * cell, y = y0 + rr * cell;
+    if (pr === rr) y += (cc > pc ? 1 : -1) * inset; else x += (rr > pr ? -1 : 1) * inset;
+    if (nr === rr) y += (nc > cc ? 1 : -1) * inset; else x += (nr > rr ? -1 : 1) * inset;
     pts[i] = [x, y];
   }
   const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
-  ctx.moveTo((pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2);
+  c.moveTo((pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2);
   for (let k = 1; k <= n; k++) {
     const prev = pts[(k - 1) % n], a = pts[k % n], b = pts[(k + 1) % n];
-    ctx.arcTo(a[0], a[1], b[0], b[1], Math.min(rho, dist(prev, a) / 2, dist(a, b) / 2));
+    c.arcTo(a[0], a[1], b[0], b[1], Math.min(rho, dist(prev, a) / 2, dist(a, b) / 2));
   }
-  ctx.closePath();
+  c.closePath();
 }
 
 // The region between two neighbouring dots bounded by their own circles and two
 // concave arcs of radius R tangent to both — the shape a water bridge makes.
-// Traced clockwise, the same direction as arc() discs and rect(), so it can
-// share a path with them and overlaps add rather than cancel.
-function bridge(x1, y1, x2, y2, r, R) {
+// Traced clockwise so it can share a path with rect() squares.
+function bridge(c, x1, y1, x2, y2, r, R) {
   const dx = x2 - x1, dy = y2 - y1;
   const d = Math.hypot(dx, dy);
   const half = d / 2;
   const hh = (r + R) ** 2 - half ** 2;
-  if (hh <= 0) return;                     // dots too far apart for this R
-  const h = Math.sqrt(hh);                 // midpoint -> meniscus centre
-  const ux = dx / d, uy = dy / d;          // along the pair
-  const nx = -uy, ny = ux;                 // across it
+  if (hh <= 0) return;
+  const h = Math.sqrt(hh);
+  const ux = dx / d, uy = dy / d;
+  const nx = -uy, ny = ux;
   const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-  const th = Math.atan2(uy, ux);           // angle of u
-  const a = Math.atan2(h, half);           // half-angle the bridge occupies on each dot
+  const th = Math.atan2(uy, ux);
+  const a = Math.atan2(h, half);
   const c1x = mx + h * nx, c1y = my + h * ny;
   const c2x = mx - h * nx, c2y = my - h * ny;
   const k = r / (r + R);
-  ctx.moveTo(x2 + (c1x - x2) * k, y2 + (c1y - y2) * k);          // tangent point on dot 2, meniscus 1 side
-  ctx.arc(c1x, c1y, R, th - a, th - Math.PI + a, true);           // meniscus 1 across to dot 1
-  ctx.arc(x1, y1, r, th + a, th - a, true);                       // along dot 1's edge
-  ctx.arc(c2x, c2y, R, th + Math.PI - a, th + a, true);           // meniscus 2 back to dot 2
-  ctx.arc(x2, y2, r, th + Math.PI + a, th + Math.PI - a, true);   // along dot 2's edge
-  ctx.closePath();
+  c.moveTo(x2 + (c1x - x2) * k, y2 + (c1y - y2) * k);
+  c.arc(c1x, c1y, R, th - a, th - Math.PI + a, true);
+  c.arc(x1, y1, r, th + a, th - a, true);
+  c.arc(c2x, c2y, R, th + Math.PI - a, th + a, true);
+  c.arc(x2, y2, r, th + Math.PI + a, th + Math.PI - a, true);
+  c.closePath();
 }
 
-function drawFlag(cx, cy, r, w) {
-  const t = theme();
-  const label = 'TODAY';
-  ctx.font = '700 11px system-ui, -apple-system, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const tw = ctx.measureText(label).width;
+function drawFlag(c, cx, cy, r, w) {
+  const th = theme();
+  const label = t('today');
+  c.font = '700 11px system-ui, -apple-system, sans-serif';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  const tw = c.measureText(label).width;
   const bw = tw + 16, bh = 20, tri = 5, gap = 4;
   const above = cy - r - gap - tri - bh >= 2;
   const by = above ? cy - r - gap - tri - bh : cy + r + gap + tri;
   const bx = clamp(cx - bw / 2, 4, w - bw - 4);
-
-  ctx.fillStyle = t.bg;
-  ctx.strokeStyle = t.accent;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.roundRect(bx, by, bw, bh, 4);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.beginPath();
-  if (above) {
-    ctx.moveTo(cx - tri, by + bh); ctx.lineTo(cx + tri, by + bh); ctx.lineTo(cx, by + bh + tri);
-  } else {
-    ctx.moveTo(cx - tri, by); ctx.lineTo(cx + tri, by); ctx.lineTo(cx, by - tri);
-  }
-  ctx.closePath();
-  ctx.fillStyle = t.accent;
-  ctx.fill();
-
-  ctx.fillStyle = t.ink;
-  ctx.fillText(label, bx + bw / 2, by + bh / 2 + 0.5);
+  c.fillStyle = th.bg;
+  c.strokeStyle = th.accent;
+  c.lineWidth = 1.5;
+  c.beginPath();
+  c.roundRect(bx, by, bw, bh, 4);
+  c.fill();
+  c.stroke();
+  c.beginPath();
+  if (above) { c.moveTo(cx - tri, by + bh); c.lineTo(cx + tri, by + bh); c.lineTo(cx, by + bh + tri); }
+  else { c.moveTo(cx - tri, by); c.lineTo(cx + tri, by); c.lineTo(cx, by - tri); }
+  c.closePath();
+  c.fillStyle = th.accent;
+  c.fill();
+  c.fillStyle = th.ink;
+  c.fillText(label, bx + bw / 2, by + bh / 2 + 0.5);
 }
 
-function legendItem(color, text, isEvent) {
-  const li = document.createElement('li');
-  li.style.setProperty('--c', color);
-  if (isEvent) li.className = 'ev';
-  li.textContent = text;
-  return li;
+// Legend entries: base regions first, then periods, then dates.
+function legendEntries() {
+  const th = theme();
+  return [
+    { color: th.past, text: t('past') },
+    { color: th.future, text: t('future') },
+    ...state.ranges.filter(r => r.start !== null).map(r => ({
+      color: r.color, text: r.label || `${fmtDate(r.start)} – ${r.end === null ? t('now') : fmtDate(r.end)}` })),
+    ...state.events.map(e => ({ color: e.color, text: e.label || fmtDate(e.date), ring: true })),
+  ];
 }
 
 function renderStats() {
   if (!model) {
-    statsEl.innerHTML = 'One dot per week. <b>Tap the button to begin.</b>';
+    statsEl.innerHTML = t('statsEmpty');
     legendEl.replaceChildren();
     return;
   }
   const pct = Math.round((model.lived / model.total) * 100);
-  statsEl.innerHTML =
-    `<b>${fmtInt.format(model.lived)}</b> weeks lived · ` +
-    `<b>${fmtInt.format(model.left)}</b> left · ` +
-    `${pct}% of ${fmtInt.format(model.total)}`;
-
-  legendEl.replaceChildren(
-    ...state.ranges.filter(r => r.start !== null).map(r =>
-      legendItem(r.color, r.label || `${fmtDate.format(r.start)} – ${r.end === null ? 'now' : fmtDate.format(r.end)}`, false)),
-    ...state.events.map(e => legendItem(e.color, e.label || fmtDate.format(e.date), true)),
-  );
+  statsEl.innerHTML = t('stats', fmtInt(model.lived), fmtInt(model.left), pct, fmtInt(model.total));
+  legendEl.replaceChildren(...legendEntries().map(en => {
+    const li = document.createElement('li');
+    li.style.setProperty('--c', en.color);
+    if (en.ring) li.className = 'ev';
+    li.textContent = en.text;
+    return li;
+  }));
 }
 
 function render() {
   model = computeModel();
   renderStats();
   writeURL();
-  // The footer may have wrapped to a new line; let layout settle before measuring.
   requestAnimationFrame(draw);
 }
 
@@ -607,6 +715,94 @@ new ResizeObserver(() => {
   cancelAnimationFrame(raf);
   raf = requestAnimationFrame(draw);
 }).observe(canvas);
+
+// ---------------------------------------------------------------------------
+// Image export: the chart plus a footer with the stats and legend, rendered
+// off-screen at 2–3x. On touch devices it goes to the share sheet (which on
+// iOS offers "Save Image"); elsewhere it downloads.
+// ---------------------------------------------------------------------------
+
+function exportImage() {
+  if (!model) return;
+  const th = theme();
+  const rect = canvas.getBoundingClientRect();
+  const w = Math.round(rect.width), gh = Math.round(rect.height);
+  const scale = clamp(window.devicePixelRatio || 1, 2, 3);
+  const pad = 16, line = 20;
+  const entries = legendEntries();
+
+  // measure the legend wrap first
+  const off = document.createElement('canvas');
+  const oc = off.getContext('2d');
+  oc.font = '500 12px system-ui, -apple-system, sans-serif';
+  const rowsOf = [];
+  let cur = [], x = 0;
+  for (const en of entries) {
+    const wdt = 14 + oc.measureText(en.text).width + 16;
+    if (x + wdt > w - pad * 2 && cur.length) { rowsOf.push(cur); cur = []; x = 0; }
+    cur.push(en); x += wdt;
+  }
+  if (cur.length) rowsOf.push(cur);
+  const footer = pad + line + rowsOf.length * line + pad;
+  const h = gh + footer;
+
+  off.width = Math.round(w * scale);
+  off.height = Math.round(h * scale);
+  oc.setTransform(scale, 0, 0, scale, 0, 0);
+  oc.fillStyle = th.bg;
+  oc.fillRect(0, 0, w, h);
+  paintGrid(oc, w, gh);
+
+  // footer: stats line, legend rows, site credit on the right
+  const inkDim = mixOklab(th.ink, th.bg, 0.4);
+  const pct = Math.round((model.lived / model.total) * 100);
+  const stats = t('stats', fmtInt(model.lived), fmtInt(model.left), pct, fmtInt(model.total)).replace(/<\/?b>/g, '');
+  let y = gh + pad + line / 2;
+  oc.textBaseline = 'middle';
+  oc.textAlign = 'left';
+  oc.font = '600 13px system-ui, -apple-system, sans-serif';
+  oc.fillStyle = th.ink;
+  oc.fillText(stats, pad, y);
+  oc.font = '500 11px system-ui, -apple-system, sans-serif';
+  oc.fillStyle = inkDim;
+  oc.textAlign = 'right';
+  oc.fillText('bulatgab.github.io/lifeinweeks', w - pad, y);
+  oc.textAlign = 'left';
+  oc.font = '500 12px system-ui, -apple-system, sans-serif';
+  for (const row of rowsOf) {
+    y += line;
+    let xx = pad;
+    for (const en of row) {
+      oc.beginPath();
+      if (en.ring) { oc.lineWidth = 2; oc.strokeStyle = en.color; oc.arc(xx + 5, y, 4, 0, Math.PI * 2); oc.stroke(); }
+      else { oc.fillStyle = en.color; oc.arc(xx + 5, y, 4.5, 0, Math.PI * 2); oc.fill(); }
+      oc.fillStyle = inkDim;
+      oc.fillText(en.text, xx + 14, y);
+      xx += 14 + oc.measureText(en.text).width + 16;
+    }
+  }
+
+  // Build the blob synchronously so the share call stays inside the user gesture.
+  const dataURL = off.toDataURL('image/png');
+  const bin = atob(dataURL.split(',')[1]);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const file = new File([bytes], t('imageName'), { type: 'image/png' });
+
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  if (coarse && navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: t('title') }).catch(() => {});
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = file.name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
 
 // ---------------------------------------------------------------------------
 // Tooltip (hover on desktop, tap on touch)
@@ -624,24 +820,24 @@ function weekAtPoint(clientX, clientY) {
   return i < model.total ? i : -1;
 }
 
-const escapeHTML = (s) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const escapeHTML = (s) => s.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 function showTip(i, clientX, clientY) {
   const start = model.birth + i * WEEK;
   const end = start + 6 * DAY;
-  const status = i < model.cur ? 'lived' : i === model.cur ? 'this week' : 'ahead';
+  const status = i < model.cur ? t('lived') : i === model.cur ? t('thisWeek') : t('ahead');
   const tags = [
-    ...(model.covering[i] || []).map(r => `<span style="--c:${r.color}">${escapeHTML(r.label || 'Untitled period')}</span>`),
-    ...(model.marks[i] || []).map(e => `<span class="ev" style="--c:${e.color}">${escapeHTML(e.label || 'Untitled date')} · ${fmtDate.format(e.date)}</span>`),
+    ...(model.covering[i] || []).map(r => `<span style="--c:${r.color}">${escapeHTML(r.label || t('untitledPeriod'))}</span>`),
+    ...(model.marks[i] || []).map(e => `<span class="ev" style="--c:${e.color}">${escapeHTML(e.label || t('untitledDate'))} · ${fmtDate(e.date)}</span>`),
   ].join('');
   tipEl.innerHTML =
-    `<b>Week ${fmtInt.format(i + 1)}</b> of ${fmtInt.format(model.total)} · ${status}<br>` +
-    `${fmtDate.format(start)} – ${fmtDate.format(end)} · age ${ageAt(model.birth, start)}` +
+    `<b>${t('weekOf', fmtInt(i + 1), fmtInt(model.total))}</b> · ${status}<br>` +
+    `${fmtDate(start)} – ${fmtDate(end)} · ${t('age', ageAt(model.birth, start))}` +
     (tags ? `<div class="tags">${tags}</div>` : '');
   tipEl.hidden = false;
-  const tw = tipEl.offsetWidth, th = tipEl.offsetHeight;
+  const tw = tipEl.offsetWidth, thh = tipEl.offsetHeight;
   const x = clamp(clientX + 14, 8, window.innerWidth - tw - 8);
-  const y = clientY + 18 + th > window.innerHeight - 8 ? clientY - th - 12 : clientY + 18;
+  const y = clientY + 18 + thh > window.innerHeight - 8 ? clientY - thh - 12 : clientY + 18;
   tipEl.style.left = x + 'px';
   tipEl.style.top = y + 'px';
 }
@@ -671,22 +867,29 @@ canvas.addEventListener('pointerdown', (e) => {
 // ---------------------------------------------------------------------------
 
 function createDateField(host, { placeholder = false, onChange }) {
-  const mk = (cls, label) => {
+  const mk = (cls) => {
     const s = document.createElement('select');
     s.className = cls;
-    s.setAttribute('aria-label', label);
     if (placeholder) {
-      const o = new Option(label, '', true, true);
+      const o = new Option('', '', true, true);
       o.disabled = true; o.hidden = true;
       s.append(o);
       s.required = true;
     }
     return s;
   };
-  const day = mk('day', 'Day'), month = mk('month', 'Month'), year = mk('year', 'Year');
+  const day = mk('day'), month = mk('month'), year = mk('year');
   for (let d = 1; d <= 31; d++) day.append(new Option(d, d));
-  for (let m = 1; m <= 12; m++) month.append(new Option(fmtMonth.format(Date.UTC(2000, m - 1, 1)), m));
+  for (let m = 1; m <= 12; m++) month.append(new Option('', m));
   let yr = [1900, 2100];
+
+  function relabel() {
+    day.setAttribute('aria-label', t('day'));
+    month.setAttribute('aria-label', t('month'));
+    year.setAttribute('aria-label', t('year'));
+    if (placeholder) { day.options[0].text = t('day'); month.options[0].text = t('month'); year.options[0].text = t('year'); }
+    for (let m = 1; m <= 12; m++) month.options[m - (placeholder ? 0 : 1)].text = fmtMonth(m);
+  }
 
   function setYears(min, max) {
     yr = [min, max];
@@ -696,11 +899,12 @@ function createDateField(host, { placeholder = false, onChange }) {
     if (cur) year.value = cur;
   }
   setYears(...yr);
+  relabel();
 
   function get() {
     if (!day.value || !month.value || !year.value) return null;
     const y = +year.value, m = +month.value;
-    const d = Math.min(+day.value, daysInMonth(y, m));   // 31 Feb -> 28/29 Feb
+    const d = Math.min(+day.value, daysInMonth(y, m));
     if (+day.value !== d) day.value = d;
     return Date.UTC(y, m - 1, d);
   }
@@ -715,14 +919,11 @@ function createDateField(host, { placeholder = false, onChange }) {
     year.value = y;
   }
 
-  for (const s of [day, month, year]) {
-    s.addEventListener('change', () => onChange(get()));
-  }
+  for (const s of [day, month, year]) s.addEventListener('change', () => onChange(get()));
   host.replaceChildren(day, month, year);
-  return { get, set, setYears };
+  return { get, set, setYears, relabel };
 }
 
-// Year range offered for periods and dates: the life span itself, when known.
 function lifeYears() {
   const now = new Date().getUTCFullYear();
   if (state.birth === null) return [now - 100, now + 100];
@@ -735,6 +936,7 @@ function lifeYears() {
 // ---------------------------------------------------------------------------
 
 const panel = document.getElementById('panel');
+const sheet = document.getElementById('sheet');
 const fab = document.getElementById('fab');
 const closeBtn = document.getElementById('close');
 const yearsIn = document.getElementById('years');
@@ -742,6 +944,8 @@ const totalHint = document.getElementById('total-hint');
 const rangesEl = document.getElementById('ranges');
 const eventsEl = document.getElementById('events');
 const themesEl = document.getElementById('themes');
+const waterEl = document.getElementById('water');
+const langEl = document.getElementById('lang');
 const rangeTpl = document.getElementById('range-row');
 const eventTpl = document.getElementById('event-row');
 
@@ -783,8 +987,8 @@ function syncRows() {
   const [y0, y1] = lifeYears();
   rangesEl.replaceChildren(...state.ranges.map(r => buildRangeRow(r, y0, y1)));
   eventsEl.replaceChildren(...state.events.map(e => buildEventRow(e, y0, y1)));
-  if (!state.ranges.length) rangesEl.append(emptyNote('No periods yet.'));
-  if (!state.events.length) eventsEl.append(emptyNote('No dates yet.'));
+  if (!state.ranges.length) rangesEl.append(emptyNote(t('noPeriods')));
+  if (!state.events.length) eventsEl.append(emptyNote(t('noDates')));
 }
 
 function emptyNote(text) {
@@ -797,7 +1001,7 @@ function emptyNote(text) {
 function updateTotalHint() {
   if (state.birth === null) { totalHint.textContent = ''; return; }
   const m = computeModel();
-  totalHint.textContent = `${fmtInt.format(m.total)} weeks in total; ${fmtInt.format(m.left)} still ahead.`;
+  totalHint.textContent = t('totalHint', fmtInt(m.total), fmtInt(m.left));
 }
 
 function wireHead(li, item, list) {
@@ -817,9 +1021,9 @@ function wireHead(li, item, list) {
 }
 
 // Reorder rows by dragging the grip (pointer events, so mouse and touch behave
-// the same) or with the arrow keys while the grip is focused. Order matters:
-// later periods paint over earlier ones, and the legend follows the list.
-let dragScroll = { dir: 0, raf: 0, y: 0, move: null };
+// the same) or with the arrow keys while the grip is focused. Order is paint
+// order and legend order.
+const dragScroll = { dir: 0, raf: 0, y: 0 };
 
 function enableReorder(grip, li, item, list) {
   grip.addEventListener('pointerdown', (e) => {
@@ -879,31 +1083,27 @@ function enableReorder(grip, li, item, list) {
     list.splice(to, 0, item);
     syncRows();
     render();
-    const rowsHost = document.getElementById(list === state.ranges ? 'ranges' : 'events');
-    rowsHost.querySelectorAll('.r-grip')[to].focus({ preventScroll: true });
+    (list === state.ranges ? rangesEl : eventsEl).querySelectorAll('.r-grip')[to].focus({ preventScroll: true });
   });
 }
 
 function buildRangeRow(r, y0, y1) {
   const li = rangeTpl.content.firstElementChild.cloneNode(true);
   wireHead(li, r, state.ranges);
-
   const start = createDateField(li.querySelector('.r-start'), { onChange: (ts) => { r.start = ts; render(); } });
   const end = createDateField(li.querySelector('.r-end'), { onChange: (ts) => { r.end = ts; render(); } });
   start.setYears(y0, y1);
   end.setYears(y0, y1);
   start.set(r.start ?? todayUTC());
-
   const endHost = li.querySelector('.r-end');
   const ongoing = li.querySelector('.r-ongoing');
-  const showEnd = () => { endHost.hidden = r.end === null; };
   ongoing.checked = r.end === null;
   end.set(r.end ?? todayUTC());
-  showEnd();
+  endHost.hidden = r.end === null;
   ongoing.addEventListener('change', () => {
     r.end = ongoing.checked ? null : Math.max(r.start ?? todayUTC(), todayUTC());
     if (r.end !== null) end.set(r.end);
-    showEnd();
+    endHost.hidden = r.end === null;
     render();
   });
   return li;
@@ -918,12 +1118,11 @@ function buildEventRow(e, y0, y1) {
   return li;
 }
 
-// One popover shared by every colour button: the theme's presets plus a free picker.
+// One popover shared by every colour button: the theme's presets, the
+// generated ring, and a custom picker as the last swatch.
 const colorPop = document.getElementById('colorpop');
 const colorPresets = colorPop.querySelector('.presets');
-const colorCustom = colorPop.querySelector('input[type="color"]');
-const sheet = document.getElementById('sheet');
-let popTarget = null;   // { btn, item } while open
+let popTarget = null;
 
 function openColorPop(btn, item) {
   if (popTarget && popTarget.btn === btn) return closeColorPop();
@@ -937,10 +1136,17 @@ function openColorPop(btn, item) {
     b.addEventListener('click', () => { setItemColor(c); closeColorPop(); });
     return b;
   };
-  colorPresets.replaceChildren(...[...theme().presets, ...extendedColors(theme())].map(swatch));
-  colorCustom.value = item.color;
+  const custom = document.createElement('label');
+  custom.className = 'pc custom';
+  custom.title = t('customColour');
+  const input = document.createElement('input');
+  input.type = 'color';
+  input.value = item.color;
+  input.setAttribute('aria-label', t('customColour'));
+  input.addEventListener('input', () => setItemColor(input.value));
+  custom.append(input);
+  colorPresets.replaceChildren(...[...theme().presets, ...extendedColors(theme())].map(swatch), custom);
   colorPop.hidden = false;
-  // Position under the button, in the sheet's scrolling coordinate space.
   const br = btn.getBoundingClientRect(), sr = sheet.getBoundingClientRect();
   const left = Math.min(br.left - sr.left, sr.width - colorPop.offsetWidth - 12);
   colorPop.style.left = Math.max(12, left) + 'px';
@@ -952,7 +1158,7 @@ function setItemColor(c) {
   if (!popTarget) return;
   popTarget.item.color = c;
   popTarget.btn.style.setProperty('--c', c);
-  for (const b of colorPop.querySelectorAll('.pc')) b.classList.toggle('on', b.style.getPropertyValue('--c') === c);
+  for (const b of colorPop.querySelectorAll('button.pc')) b.classList.toggle('on', b.style.getPropertyValue('--c') === c);
   render();
 }
 
@@ -961,31 +1167,44 @@ function closeColorPop() {
   popTarget = null;
 }
 
-colorCustom.addEventListener('input', () => setItemColor(colorCustom.value));
-sheet.addEventListener('scroll', () => { if (popTarget) closeColorPop(); }, { passive: true });
 document.addEventListener('pointerdown', (e) => {
   if (popTarget && !colorPop.contains(e.target) && !popTarget.btn.contains(e.target)) closeColorPop();
 });
+sheet.addEventListener('scroll', () => { if (popTarget) closeColorPop(); }, { passive: true });
 
 function syncThemes() {
-  themesEl.replaceChildren(...Object.entries(THEMES).map(([key, t]) => {
+  themesEl.replaceChildren(...Object.entries(THEMES).map(([key, th]) => {
     const label = document.createElement('label');
     label.className = 'swatch';
     label.innerHTML =
       `<input type="radio" name="theme" value="${key}">` +
-      `<span class="sw" style="--sbg:${t.bg};--sink:${t.ink}">` +
-      `<span class="dots"><i style="background:${t.past}"></i><i style="background:${t.future}"></i>` +
-      `<i style="background:${t.presets[0]}"></i><i style="background:${t.presets[1]}"></i></span>${t.name}</span>`;
+      `<span class="sw" style="--sbg:${th.bg};--sink:${th.ink}">` +
+      `<span class="dots"><i style="background:${th.past}"></i><i style="background:${th.future}"></i>` +
+      `<i style="background:${th.presets[0]}"></i><i style="background:${th.presets[1]}"></i></span>${t('themes')[key]}</span>`;
     const input = label.querySelector('input');
     input.checked = key === state.theme;
     input.addEventListener('change', () => {
       switchTheme(key);
-      syncRows();          // swatch buttons may have been remapped
+      syncRows();
       render();
     });
     return label;
   }));
 }
+
+waterEl.addEventListener('change', (e) => {
+  if (e.target.name === 'water') { state.water = +e.target.value; render(); }
+});
+
+langEl.addEventListener('change', (e) => {
+  if (e.target.name !== 'lang') return;
+  state.lang = e.target.value;
+  state.langExplicit = true;
+  applyLang();
+  birthField.relabel();
+  syncForm();
+  render();
+});
 
 yearsIn.addEventListener('input', () => {
   const v = parseInt(yearsIn.value, 10);
@@ -1017,12 +1236,14 @@ document.getElementById('copy').addEventListener('click', async (e) => {
   const old = btn.textContent;
   try {
     await navigator.clipboard.writeText(location.href);
-    btn.textContent = 'Copied!';
+    btn.textContent = t('copied');
   } catch {
-    btn.textContent = 'Copy from the address bar';
+    btn.textContent = t('copyFail');
   }
   setTimeout(() => { btn.textContent = old; }, 1800);
 });
+
+document.getElementById('export').addEventListener('click', exportImage);
 
 document.getElementById('reset').addEventListener('click', () => {
   state.birth = null;
@@ -1043,21 +1264,17 @@ document.addEventListener('keydown', (e) => {
   popTarget ? closeColorPop() : closePanel();
 });
 
-const waterEl = document.getElementById('water');
-waterEl.addEventListener('change', (e) => {
-  if (e.target.name === 'water') { state.water = +e.target.value; render(); }
-});
-
 // ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
 
 readURL();
 applyTheme();
+applyLang();
+birthField.relabel();
 render();
 if (state.birth === null) openPanel();
 
-// If the tab stays open past midnight, "today" moves on.
 setInterval(() => {
   if (model && todayUTC() !== model.today) render();
 }, 60_000);
