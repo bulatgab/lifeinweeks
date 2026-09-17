@@ -3,19 +3,26 @@
 
 const DAY = 86_400_000;
 const WEEK = 7 * DAY;
-
-const COLORS = {
-  past: '#5b2fa3',
-  future: '#ff4370',
-  today: '#30f0ff',
-  bg: '#1a0b2e',
-};
-
-// Default colours offered to new periods, in fixed order. Validated (all pairs,
-// dark surface, incl. past/future) for colour-vision deficiency separation.
-const PRESET = ['#ffb340', '#22c9a8', '#4f9df9', '#f0f0f5', '#b45309'];
-
 const DEFAULT_YEARS = 80;
+const DEFAULT_THEME = 'dusk';
+
+// Each theme: surfaces, ink, the past/future base dots, the "today" dot, the
+// accent used for the FAB / buttons / TODAY flag, and the default colours
+// offered to new periods and dates. Every preset list was validated all-pairs
+// (together with past + future, on that theme's background) for colour-vision
+// deficiency and normal-vision separation.
+const THEMES = {
+  dusk:  { name: 'Dusk',  bg: '#1a0b2e', panel: '#24123d', ink: '#f4effa', past: '#5b2fa3', future: '#ff4370', today: '#30f0ff', accent: '#ff4370', onAccent: '#ffffff',
+           presets: ['#ffb340', '#22c9a8', '#4f9df9', '#f0f0f5', '#b45309'] },
+  slate: { name: 'Slate', bg: '#2e3440', panel: '#3b4252', ink: '#eceff4', past: '#4c566a', future: '#d8dee9', today: '#88c0d0', accent: '#88c0d0', onAccent: '#2e3440',
+           presets: ['#c1666b', '#5b8def', '#e6b450', '#5fb3a1'] },
+  moss:  { name: 'Moss',  bg: '#121c17', panel: '#1a2721', ink: '#e8efe9', past: '#2f4a3f', future: '#d9e2d3', today: '#f5d76e', accent: '#8fbf9f', onAccent: '#121c17',
+           presets: ['#c1666b', '#d4a017', '#5b8def', '#5fb3a1'] },
+  ink:   { name: 'Ink',   bg: '#141418', panel: '#1c1c22', ink: '#ececf0', past: '#2c2c34', future: '#b8b8c4', today: '#ff7a59', accent: '#ff7a59', onAccent: '#141418',
+           presets: ['#d4a017', '#5b8def', '#3fa7a0', '#bf616a', '#eceff4'] },
+  paper: { name: 'Paper', bg: '#f5f0e6', panel: '#fffdf8', ink: '#2a2a33', past: '#d3c9b8', future: '#3b3946', today: '#d9534f', accent: '#d9534f', onAccent: '#ffffff', light: true,
+           presets: ['#2f6b2f', '#a67c00', '#4f74a8', '#b0417a', '#7c3aed'] },
+};
 
 // ---------------------------------------------------------------------------
 // Dates. Every date is a UTC-midnight timestamp so that day arithmetic is exact
@@ -33,9 +40,7 @@ function parseISO(s) {
   return t;
 }
 
-function toISO(t) {
-  return new Date(t).toISOString().slice(0, 10);
-}
+const toISO = (t) => new Date(t).toISOString().slice(0, 10);
 
 function todayUTC() {
   const d = new Date();
@@ -47,66 +52,117 @@ function addYears(t, years) {
   return Date.UTC(d.getUTCFullYear() + years, d.getUTCMonth(), d.getUTCDate());
 }
 
+const daysInMonth = (y, m1) => new Date(Date.UTC(y, m1, 0)).getUTCDate();   // m1 = 1..12
+
 function ageAt(birth, t) {
   const b = new Date(birth), d = new Date(t);
   let age = d.getUTCFullYear() - b.getUTCFullYear();
   const beforeBirthday =
     d.getUTCMonth() < b.getUTCMonth() ||
     (d.getUTCMonth() === b.getUTCMonth() && d.getUTCDate() < b.getUTCDate());
-  if (beforeBirthday) age -= 1;
-  return age;
+  return beforeBirthday ? age - 1 : age;
 }
 
 const fmtDate = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const fmtMonth = new Intl.DateTimeFormat(undefined, { month: 'short', timeZone: 'UTC' });
 const fmtInt = new Intl.NumberFormat(undefined);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 // ---------------------------------------------------------------------------
 // State <-> URL
-//   ?b=1990-01-01&l=80&r=2008-09-01~2013-06-30~ffb340~University&r=...
-//   A period is start~end~rrggbb~label; empty end means "still ongoing".
+//   ?b=1990-01-01&l=80&t=slate
+//    &r=2008-09-01~2013-06-30~ffb340~University   (period; empty end = ongoing)
+//    &d=2015-08-22~22c9a8~Wedding                 (single date, drawn as a ring)
 // ---------------------------------------------------------------------------
 
 const state = {
-  birth: null,       // UTC ts | null
+  birth: null,        // UTC ts | null
   years: DEFAULT_YEARS,
-  ranges: [],        // { start: ts|null, end: ts|null, color: '#rrggbb', label: string }
+  theme: DEFAULT_THEME,
+  ranges: [],         // { start: ts|null, end: ts|null, color, label }
+  events: [],         // { date: ts, color, label }
 };
+
+const theme = () => THEMES[state.theme];
 
 function readURL() {
   const p = new URLSearchParams(location.search);
   state.birth = parseISO(p.get('b'));
   const l = parseInt(p.get('l'), 10);
   state.years = Number.isFinite(l) ? clamp(l, 1, 150) : DEFAULT_YEARS;
+  state.theme = THEMES[p.get('t')] ? p.get('t') : DEFAULT_THEME;
   state.ranges = p.getAll('r').map(decodeRange).filter(Boolean);
+  state.events = p.getAll('d').map(decodeEvent).filter(Boolean);
 }
+
+const parseColor = (c, fallback) => /^[0-9a-f]{6}$/i.test(c || '') ? '#' + c.toLowerCase() : fallback;
 
 function decodeRange(s) {
   const [start, end, color, ...rest] = s.split('~');
   const st = parseISO(start);
   if (st === null) return null;
-  const en = end ? parseISO(end) : null;
-  const col = /^[0-9a-f]{6}$/i.test(color) ? '#' + color.toLowerCase() : PRESET[0];
-  return { start: st, end: en, color: col, label: rest.join('~') };
+  return { start: st, end: end ? parseISO(end) : null, color: parseColor(color, theme().presets[0]), label: rest.join('~') };
 }
+
+function decodeEvent(s) {
+  const [date, color, ...rest] = s.split('~');
+  const t = parseISO(date);
+  if (t === null) return null;
+  return { date: t, color: parseColor(color, theme().presets[0]), label: rest.join('~') };
+}
+
+const encLabel = (s) => encodeURIComponent(s).replace(/~/g, '%7E');
 
 function writeURL() {
   const parts = [];
   if (state.birth !== null) parts.push('b=' + toISO(state.birth));
   if (state.years !== DEFAULT_YEARS) parts.push('l=' + state.years);
+  if (state.theme !== DEFAULT_THEME) parts.push('t=' + state.theme);
   for (const r of state.ranges) {
     if (r.start === null) continue;
-    parts.push('r=' + [
-      toISO(r.start),
-      r.end === null ? '' : toISO(r.end),
-      r.color.slice(1),
-      encodeURIComponent(r.label).replace(/~/g, '%7E'),
-    ].join('~'));
+    parts.push('r=' + [toISO(r.start), r.end === null ? '' : toISO(r.end), r.color.slice(1), encLabel(r.label)].join('~'));
+  }
+  for (const e of state.events) {
+    parts.push('d=' + [toISO(e.date), e.color.slice(1), encLabel(e.label)].join('~'));
   }
   const qs = parts.length ? '?' + parts.join('&') : '';
   history.replaceState(null, '', location.pathname + qs + location.hash);
 }
 
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+// ---------------------------------------------------------------------------
+// Theme
+// ---------------------------------------------------------------------------
+
+function applyTheme() {
+  const t = theme();
+  const s = document.documentElement.style;
+  s.setProperty('--bg', t.bg);
+  s.setProperty('--bg-2', t.panel);
+  s.setProperty('--ink', t.ink);
+  s.setProperty('--accent', t.accent);
+  s.setProperty('--on-accent', t.onAccent);
+  s.setProperty('--today', t.today);
+  s.colorScheme = t.light ? 'light' : 'dark';
+  document.querySelector('meta[name="theme-color"]').content = t.bg;
+  document.querySelector('meta[name="color-scheme"]').content = t.light ? 'light' : 'dark';
+}
+
+// Switching theme: colours that were one of the old theme's presets follow to
+// the corresponding preset of the new theme; anything hand-picked is left alone.
+function switchTheme(name) {
+  const from = theme().presets, to = THEMES[name].presets;
+  const remap = (c) => { const i = from.indexOf(c); return i < 0 ? c : to[i % to.length]; };
+  for (const r of state.ranges) r.color = remap(r.color);
+  for (const e of state.events) e.color = remap(e.color);
+  state.theme = name;
+  applyTheme();
+}
+
+function nextPreset() {
+  const used = new Set([...state.ranges, ...state.events].map(x => x.color));
+  const p = theme().presets;
+  return p.find(c => !used.has(c)) || p[(state.ranges.length + state.events.length) % p.length];
+}
 
 // ---------------------------------------------------------------------------
 // Model: which week is which colour
@@ -114,38 +170,43 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 function computeModel() {
   if (state.birth === null) return null;
+  const t = theme();
   const birth = state.birth;
   const death = addYears(birth, state.years);
   const total = Math.max(1, Math.floor((death - birth) / WEEK));
   const today = todayUTC();
-  const weekOf = (t) => Math.floor((t - birth) / WEEK);
-  const cur = weekOf(today);             // may be < 0 or >= total
+  const weekOf = (ts) => Math.floor((ts - birth) / WEEK);
+  const cur = weekOf(today);              // may be < 0 or >= total
 
   const colors = new Array(total);
-  for (let i = 0; i < total; i++) colors[i] = i < cur ? COLORS.past : COLORS.future;
+  for (let i = 0; i < total; i++) colors[i] = i < cur ? t.past : t.future;
 
-  // Period coverage, in list order so later periods paint over earlier ones.
-  const covering = new Array(total);     // week -> [range, ...] for the tooltip
+  // Period coverage in list order, so later periods paint over earlier ones.
+  const covering = new Array(total);      // week -> [range, ...] for the tooltip
   for (const r of state.ranges) {
     if (r.start === null) continue;
     const endT = r.end === null ? today : r.end;
     if (endT < r.start) continue;
-    const a = clamp(weekOf(r.start), 0, total - 1);
-    const b = clamp(weekOf(endT), 0, total - 1);
-    if (weekOf(endT) < 0 || weekOf(r.start) > total - 1) continue;
-    for (let i = a; i <= b; i++) {
+    const a = weekOf(r.start), b = weekOf(endT);
+    if (b < 0 || a > total - 1) continue;
+    for (let i = clamp(a, 0, total - 1); i <= clamp(b, 0, total - 1); i++) {
       colors[i] = r.color;
       (covering[i] ||= []).push(r);
     }
   }
 
+  const marks = new Array(total);         // week -> [event, ...]
+  for (const e of state.events) {
+    const w = weekOf(e.date);
+    if (w >= 0 && w < total) (marks[w] ||= []).push(e);
+  }
+
   const lived = clamp(cur, 0, total);
-  return { birth, death, total, today, cur, lived, left: total - lived, colors, covering, weekOf };
+  return { birth, death, total, today, cur, lived, left: total - lived, colors, covering, marks, weekOf };
 }
 
 // ---------------------------------------------------------------------------
 // Layout: the densest grid of n square cells that fits a W x H box.
-// Iterating over column counts is O(n) with n ~ 4–8k — instant.
 // ---------------------------------------------------------------------------
 
 function bestGrid(n, W, H) {
@@ -154,7 +215,7 @@ function bestGrid(n, W, H) {
     const rows = Math.ceil(n / cols);
     const cell = Math.min(W / cols, H / rows);
     if (cell > best.cell) best = { cols, rows, cell };
-    if (W / cols < best.cell) break;          // cells only get narrower from here
+    if (W / cols < best.cell) break;      // cells only get narrower from here
   }
   return best;
 }
@@ -173,6 +234,7 @@ let model = null;
 let geo = null;   // { ox, oy, cols, rows, cell, r } of the last draw, for hit-testing
 
 function draw() {
+  const t = theme();
   const rect = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
   const w = Math.max(1, Math.round(rect.width));
@@ -186,11 +248,13 @@ function draw() {
   geo = null;
 
   if (!model) {
-    ctx.fillStyle = 'rgba(244,239,250,0.5)';
+    ctx.fillStyle = t.ink;
+    ctx.globalAlpha = 0.55;
     ctx.font = '500 15px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('Set your date of birth to see your weeks', w / 2, h / 2);
+    ctx.globalAlpha = 1;
     return;
   }
 
@@ -203,6 +267,7 @@ function draw() {
   const oy = top + (H - rows * cell) / 2;
   const r = cell * 0.36;
   geo = { ox, oy, cols, rows, cell, r };
+  const centre = (i) => [ox + (i % cols) * cell + cell / 2, oy + Math.floor(i / cols) * cell + cell / 2];
 
   // Group dots by colour so the canvas changes fillStyle a handful of times, not thousands.
   const groups = new Map();
@@ -216,8 +281,7 @@ function draw() {
     ctx.fillStyle = color;
     ctx.beginPath();
     for (const i of idx) {
-      const cx = ox + (i % cols) * cell + cell / 2;
-      const cy = oy + Math.floor(i / cols) * cell + cell / 2;
+      const [cx, cy] = centre(i);
       ctx.moveTo(cx + r, cy);
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
     }
@@ -225,23 +289,38 @@ function draw() {
   }
 
   // Today: a brighter dot with a glow and a small flag.
-  const t = model.cur;
-  if (t >= 0 && t < model.total) {
-    const cx = ox + (t % cols) * cell + cell / 2;
-    const cy = oy + Math.floor(t / cols) * cell + cell / 2;
+  const cur = model.cur;
+  if (cur >= 0 && cur < model.total) {
+    const [cx, cy] = centre(cur);
     ctx.save();
-    ctx.shadowColor = COLORS.today;
+    ctx.shadowColor = t.today;
     ctx.shadowBlur = Math.max(6, r * 2.5);
-    ctx.fillStyle = COLORS.today;
+    ctx.fillStyle = t.today;
     ctx.beginPath();
     ctx.arc(cx, cy, Math.max(r * 1.15, 2.2), 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    drawFlag(cx, cy, r, w);
   }
+
+  // Single dates: a ring in the gap around the dot, so the dot's own colour stays visible.
+  const lw = Math.max(2, cell * 0.14);
+  const ringR = Math.min(r + lw / 2, cell / 2 - lw / 2);
+  ctx.lineWidth = lw;
+  for (let i = 0; i < model.total; i++) {
+    const evs = model.marks[i];
+    if (!evs) continue;
+    const [cx, cy] = centre(i);
+    ctx.strokeStyle = evs[evs.length - 1].color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  if (cur >= 0 && cur < model.total) drawFlag(...centre(cur), r, w);
 }
 
 function drawFlag(cx, cy, r, w) {
+  const t = theme();
   const label = 'TODAY';
   ctx.font = '700 11px system-ui, -apple-system, sans-serif';
   ctx.textAlign = 'center';
@@ -252,31 +331,34 @@ function drawFlag(cx, cy, r, w) {
   const by = above ? cy - r - gap - tri - bh : cy + r + gap + tri;
   const bx = clamp(cx - bw / 2, 4, w - bw - 4);
 
-  ctx.fillStyle = COLORS.bg;
-  ctx.strokeStyle = COLORS.future;
+  ctx.fillStyle = t.bg;
+  ctx.strokeStyle = t.accent;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.roundRect(bx, by, bw, bh, 4);
   ctx.fill();
   ctx.stroke();
 
-  // pointer triangle
   ctx.beginPath();
   if (above) {
-    ctx.moveTo(cx - tri, by + bh);
-    ctx.lineTo(cx + tri, by + bh);
-    ctx.lineTo(cx, by + bh + tri);
+    ctx.moveTo(cx - tri, by + bh); ctx.lineTo(cx + tri, by + bh); ctx.lineTo(cx, by + bh + tri);
   } else {
-    ctx.moveTo(cx - tri, by);
-    ctx.lineTo(cx + tri, by);
-    ctx.lineTo(cx, by - tri);
+    ctx.moveTo(cx - tri, by); ctx.lineTo(cx + tri, by); ctx.lineTo(cx, by - tri);
   }
   ctx.closePath();
-  ctx.fillStyle = COLORS.future;
+  ctx.fillStyle = t.accent;
   ctx.fill();
 
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = t.ink;
   ctx.fillText(label, bx + bw / 2, by + bh / 2 + 0.5);
+}
+
+function legendItem(color, text, isEvent) {
+  const li = document.createElement('li');
+  li.style.setProperty('--c', color);
+  if (isEvent) li.className = 'ev';
+  li.textContent = text;
+  return li;
 }
 
 function renderStats() {
@@ -291,14 +373,11 @@ function renderStats() {
     `<b>${fmtInt.format(model.left)}</b> left · ` +
     `${pct}% of ${fmtInt.format(model.total)}`;
 
-  legendEl.replaceChildren(...state.ranges
-    .filter(r => r.start !== null)
-    .map(r => {
-      const li = document.createElement('li');
-      li.style.setProperty('--c', r.color);
-      li.textContent = r.label || `${fmtDate.format(r.start)} – ${r.end === null ? 'now' : fmtDate.format(r.end)}`;
-      return li;
-    }));
+  legendEl.replaceChildren(
+    ...state.ranges.filter(r => r.start !== null).map(r =>
+      legendItem(r.color, r.label || `${fmtDate.format(r.start)} – ${r.end === null ? 'now' : fmtDate.format(r.end)}`, false)),
+    ...state.events.map(e => legendItem(e.color, e.label || fmtDate.format(e.date), true)),
+  );
 }
 
 function render() {
@@ -309,7 +388,6 @@ function render() {
   requestAnimationFrame(draw);
 }
 
-// Redraw whenever the canvas box changes (rotation, address-bar collapse, resize).
 let raf = 0;
 new ResizeObserver(() => {
   cancelAnimationFrame(raf);
@@ -332,13 +410,16 @@ function weekAtPoint(clientX, clientY) {
   return i < model.total ? i : -1;
 }
 
+const escapeHTML = (s) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 function showTip(i, clientX, clientY) {
   const start = model.birth + i * WEEK;
   const end = start + 6 * DAY;
   const status = i < model.cur ? 'lived' : i === model.cur ? 'this week' : 'ahead';
-  const tags = (model.covering[i] || [])
-    .map(r => `<span style="--c:${r.color}">${escapeHTML(r.label || 'Untitled period')}</span>`)
-    .join('');
+  const tags = [
+    ...(model.covering[i] || []).map(r => `<span style="--c:${r.color}">${escapeHTML(r.label || 'Untitled period')}</span>`),
+    ...(model.marks[i] || []).map(e => `<span class="ev" style="--c:${e.color}">${escapeHTML(e.label || 'Untitled date')} · ${fmtDate.format(e.date)}</span>`),
+  ].join('');
   tipEl.innerHTML =
     `<b>Week ${fmtInt.format(i + 1)}</b> of ${fmtInt.format(model.total)} · ${status}<br>` +
     `${fmtDate.format(start)} – ${fmtDate.format(end)} · age ${ageAt(model.birth, start)}` +
@@ -357,9 +438,10 @@ let tipTimer = 0;
 canvas.addEventListener('pointermove', (e) => {
   if (e.pointerType === 'touch') return;
   const i = weekAtPoint(e.clientX, e.clientY);
+  canvas.style.cursor = i < 0 ? '' : 'pointer';
   i < 0 ? hideTip() : showTip(i, e.clientX, e.clientY);
 });
-canvas.addEventListener('pointerleave', hideTip);
+canvas.addEventListener('pointerleave', () => { hideTip(); canvas.style.cursor = ''; });
 canvas.addEventListener('pointerdown', (e) => {
   if (e.pointerType !== 'touch') return;
   const i = weekAtPoint(e.clientX, e.clientY);
@@ -369,8 +451,69 @@ canvas.addEventListener('pointerdown', (e) => {
   tipTimer = setTimeout(hideTip, 2500);
 });
 
-function escapeHTML(s) {
-  return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// ---------------------------------------------------------------------------
+// Date field: three <select>s (day / month / year). Native <select> opens the
+// wheel picker on iOS and a plain dropdown elsewhere — no library needed.
+// ---------------------------------------------------------------------------
+
+function createDateField(host, { placeholder = false, onChange }) {
+  const mk = (cls, label) => {
+    const s = document.createElement('select');
+    s.className = cls;
+    s.setAttribute('aria-label', label);
+    if (placeholder) {
+      const o = new Option(label, '', true, true);
+      o.disabled = true; o.hidden = true;
+      s.append(o);
+      s.required = true;
+    }
+    return s;
+  };
+  const day = mk('day', 'Day'), month = mk('month', 'Month'), year = mk('year', 'Year');
+  for (let d = 1; d <= 31; d++) day.append(new Option(d, d));
+  for (let m = 1; m <= 12; m++) month.append(new Option(fmtMonth.format(Date.UTC(2000, m - 1, 1)), m));
+  let yr = [1900, 2100];
+
+  function setYears(min, max) {
+    yr = [min, max];
+    const cur = year.value;
+    year.replaceChildren(...(placeholder ? [year.options[0]] : []));
+    for (let y = min; y <= max; y++) year.append(new Option(y, y));
+    if (cur) year.value = cur;
+  }
+  setYears(...yr);
+
+  function get() {
+    if (!day.value || !month.value || !year.value) return null;
+    const y = +year.value, m = +month.value;
+    const d = Math.min(+day.value, daysInMonth(y, m));   // 31 Feb -> 28/29 Feb
+    if (+day.value !== d) day.value = d;
+    return Date.UTC(y, m - 1, d);
+  }
+
+  function set(ts) {
+    if (ts === null) { day.value = ''; month.value = ''; year.value = ''; return; }
+    const d = new Date(ts);
+    const y = d.getUTCFullYear();
+    if (y < yr[0] || y > yr[1]) setYears(Math.min(yr[0], y), Math.max(yr[1], y));
+    day.value = d.getUTCDate();
+    month.value = d.getUTCMonth() + 1;
+    year.value = y;
+  }
+
+  for (const s of [day, month, year]) {
+    s.addEventListener('change', () => onChange(get()));
+  }
+  host.replaceChildren(day, month, year);
+  return { get, set, setYears };
+}
+
+// Year range offered for periods and dates: the life span itself, when known.
+function lifeYears() {
+  const now = new Date().getUTCFullYear();
+  if (state.birth === null) return [now - 100, now + 100];
+  const b = new Date(state.birth).getUTCFullYear();
+  return [b, Math.max(b + state.years, now)];
 }
 
 // ---------------------------------------------------------------------------
@@ -379,18 +522,30 @@ function escapeHTML(s) {
 
 const panel = document.getElementById('panel');
 const fab = document.getElementById('fab');
-const birthIn = document.getElementById('birth');
+const closeBtn = document.getElementById('close');
 const yearsIn = document.getElementById('years');
 const totalHint = document.getElementById('total-hint');
 const rangesEl = document.getElementById('ranges');
-const rowTpl = document.getElementById('range-row');
+const eventsEl = document.getElementById('events');
+const themesEl = document.getElementById('themes');
+const rangeTpl = document.getElementById('range-row');
+const eventTpl = document.getElementById('event-row');
+
+const birthField = createDateField(document.getElementById('birth'), {
+  placeholder: true,
+  onChange: (ts) => { state.birth = ts; syncRows(); updateTotalHint(); render(); },
+});
+{
+  const now = new Date().getUTCFullYear();
+  birthField.setYears(now - 120, now);
+}
 
 function openPanel() {
   syncForm();
   panel.hidden = false;
   fab.setAttribute('aria-expanded', 'true');
   hideTip();
-  (state.birth === null ? birthIn : document.getElementById('close')).focus({ preventScroll: true });
+  (state.birth === null ? document.querySelector('#birth select') : closeBtn).focus({ preventScroll: true });
 }
 
 function closePanel() {
@@ -400,17 +555,26 @@ function closePanel() {
 }
 
 function syncForm() {
-  birthIn.value = state.birth === null ? '' : toISO(state.birth);
-  birthIn.max = toISO(todayUTC());
+  birthField.set(state.birth);
   yearsIn.value = state.years;
   updateTotalHint();
-  rangesEl.replaceChildren(...state.ranges.map(buildRow));
-  if (!state.ranges.length) {
-    const p = document.createElement('p');
-    p.className = 'empty';
-    p.textContent = 'No periods yet.';
-    rangesEl.append(p);
-  }
+  syncRows();
+  syncThemes();
+}
+
+function syncRows() {
+  const [y0, y1] = lifeYears();
+  rangesEl.replaceChildren(...state.ranges.map(r => buildRangeRow(r, y0, y1)));
+  eventsEl.replaceChildren(...state.events.map(e => buildEventRow(e, y0, y1)));
+  if (!state.ranges.length) rangesEl.append(emptyNote('No periods yet.'));
+  if (!state.events.length) eventsEl.append(emptyNote('No dates yet.'));
+}
+
+function emptyNote(text) {
+  const p = document.createElement('p');
+  p.className = 'empty';
+  p.textContent = text;
+  return p;
 }
 
 function updateTotalHint() {
@@ -419,35 +583,73 @@ function updateTotalHint() {
   totalHint.textContent = `${fmtInt.format(m.total)} weeks in total; ${fmtInt.format(m.left)} still ahead.`;
 }
 
-function buildRow(r) {
-  const li = rowTpl.content.firstElementChild.cloneNode(true);
+function wireHead(li, item, list) {
   const color = li.querySelector('.r-color');
   const label = li.querySelector('.r-label');
-  const start = li.querySelector('.r-start');
-  const end = li.querySelector('.r-end');
-
-  color.value = r.color;
-  label.value = r.label;
-  start.value = r.start === null ? '' : toISO(r.start);
-  end.value = r.end === null ? '' : toISO(r.end);
-
-  color.addEventListener('input', () => { r.color = color.value; render(); });
-  label.addEventListener('input', () => { r.label = label.value; render(); });
-  start.addEventListener('change', () => { r.start = parseISO(start.value); render(); });
-  end.addEventListener('change', () => { r.end = parseISO(end.value); render(); });
+  color.value = item.color;
+  label.value = item.label;
+  color.addEventListener('input', () => { item.color = color.value; render(); });
+  label.addEventListener('input', () => { item.label = label.value; render(); });
   li.querySelector('.r-del').addEventListener('click', () => {
-    state.ranges.splice(state.ranges.indexOf(r), 1);
-    syncForm();
+    list.splice(list.indexOf(item), 1);
+    syncRows();
+    render();
+  });
+}
+
+function buildRangeRow(r, y0, y1) {
+  const li = rangeTpl.content.firstElementChild.cloneNode(true);
+  wireHead(li, r, state.ranges);
+
+  const start = createDateField(li.querySelector('.r-start'), { onChange: (ts) => { r.start = ts; render(); } });
+  const end = createDateField(li.querySelector('.r-end'), { onChange: (ts) => { r.end = ts; render(); } });
+  start.setYears(y0, y1);
+  end.setYears(y0, y1);
+  start.set(r.start ?? todayUTC());
+
+  const endHost = li.querySelector('.r-end');
+  const ongoing = li.querySelector('.r-ongoing');
+  const showEnd = () => { endHost.hidden = r.end === null; };
+  ongoing.checked = r.end === null;
+  end.set(r.end ?? todayUTC());
+  showEnd();
+  ongoing.addEventListener('change', () => {
+    r.end = ongoing.checked ? null : Math.max(r.start ?? todayUTC(), todayUTC());
+    if (r.end !== null) end.set(r.end);
+    showEnd();
     render();
   });
   return li;
 }
 
-birthIn.addEventListener('change', () => {
-  state.birth = parseISO(birthIn.value);
-  updateTotalHint();
-  render();
-});
+function buildEventRow(e, y0, y1) {
+  const li = eventTpl.content.firstElementChild.cloneNode(true);
+  wireHead(li, e, state.events);
+  const date = createDateField(li.querySelector('.r-date'), { onChange: (ts) => { e.date = ts; render(); } });
+  date.setYears(y0, y1);
+  date.set(e.date);
+  return li;
+}
+
+function syncThemes() {
+  themesEl.replaceChildren(...Object.entries(THEMES).map(([key, t]) => {
+    const label = document.createElement('label');
+    label.className = 'swatch';
+    label.innerHTML =
+      `<input type="radio" name="theme" value="${key}">` +
+      `<span class="sw" style="--sbg:${t.bg};--sink:${t.ink}">` +
+      `<span class="dots"><i style="background:${t.past}"></i><i style="background:${t.future}"></i>` +
+      `<i style="background:${t.presets[0]}"></i><i style="background:${t.presets[1]}"></i></span>${t.name}</span>`;
+    const input = label.querySelector('input');
+    input.checked = key === state.theme;
+    input.addEventListener('change', () => {
+      switchTheme(key);
+      syncRows();          // colour inputs may have been remapped
+      render();
+    });
+    return label;
+  }));
+}
 
 yearsIn.addEventListener('input', () => {
   const v = parseInt(yearsIn.value, 10);
@@ -456,17 +658,22 @@ yearsIn.addEventListener('input', () => {
   updateTotalHint();
   render();
 });
+yearsIn.addEventListener('change', () => { yearsIn.value = state.years; syncRows(); });
 
-document.getElementById('add').addEventListener('click', () => {
-  const used = new Set(state.ranges.map(r => r.color));
-  const color = PRESET.find(c => !used.has(c)) || PRESET[state.ranges.length % PRESET.length];
-  const today = todayUTC();
-  const r = { start: addYears(today, -1), end: null, color, label: '' };
-  state.ranges.push(r);
-  syncForm();
+function addItem(list, item, host) {
+  list.push(item);
+  syncRows();
   render();
-  rangesEl.lastElementChild.querySelector('.r-label').focus({ preventScroll: true });
-  rangesEl.lastElementChild.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  const last = host.lastElementChild;
+  last.querySelector('.r-label').focus({ preventScroll: true });
+  last.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+document.getElementById('add-range').addEventListener('click', () => {
+  addItem(state.ranges, { start: addYears(todayUTC(), -1), end: null, color: nextPreset(), label: '' }, rangesEl);
+});
+document.getElementById('add-event').addEventListener('click', () => {
+  addItem(state.events, { date: todayUTC(), color: nextPreset(), label: '' }, eventsEl);
 });
 
 document.getElementById('copy').addEventListener('click', async (e) => {
@@ -476,7 +683,6 @@ document.getElementById('copy').addEventListener('click', async (e) => {
     await navigator.clipboard.writeText(location.href);
     btn.textContent = 'Copied!';
   } catch {
-    // Clipboard blocked (insecure context or permission) — fall back to a prompt-free selection.
     btn.textContent = 'Copy from the address bar';
   }
   setTimeout(() => { btn.textContent = old; }, 1800);
@@ -486,13 +692,14 @@ document.getElementById('reset').addEventListener('click', () => {
   state.birth = null;
   state.years = DEFAULT_YEARS;
   state.ranges = [];
+  state.events = [];
   syncForm();
   render();
-  birthIn.focus({ preventScroll: true });
+  document.querySelector('#birth select').focus({ preventScroll: true });
 });
 
 fab.addEventListener('click', openPanel);
-document.getElementById('close').addEventListener('click', closePanel);
+closeBtn.addEventListener('click', closePanel);
 document.getElementById('backdrop').addEventListener('click', closePanel);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !panel.hidden) closePanel();
@@ -503,10 +710,11 @@ document.addEventListener('keydown', (e) => {
 // ---------------------------------------------------------------------------
 
 readURL();
+applyTheme();
 render();
 if (state.birth === null) openPanel();
 
-// Midnight rollover: if the tab stays open past the week boundary, refresh "today".
+// If the tab stays open past midnight, "today" moves on.
 setInterval(() => {
   if (model && todayUTC() !== model.today) render();
 }, 60_000);

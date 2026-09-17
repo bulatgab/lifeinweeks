@@ -16,7 +16,7 @@
   <canvas id="grid" aria-label="Your life in weeks, one dot per week"></canvas>
   <footer id="bar">
     <p id="stats" aria-live="polite"></p>
-    <ul id="legend" aria-label="Periods"></ul>
+    <ul id="legend" aria-label="Periods and dates"></ul>
   </footer>
 </main>
 
@@ -44,25 +44,31 @@
       </button>
     </header>
 
-    <div class="field-row">
-      <label class="field">
-        <span>Date of birth</span>
-        <input type="date" id="birth" required>
-      </label>
-      <label class="field">
-        <span>Expected lifespan</span>
-        <span class="with-unit">
-          <input type="number" id="years" min="1" max="150" step="1" inputmode="numeric">
-          <span class="unit">years</span>
-        </span>
-      </label>
+    <div class="field">
+      <span class="label">Date of birth</span>
+      <div class="date-field" id="birth"></div>
+    </div>
+    <div class="field">
+      <span class="label">Expected lifespan</span>
+      <span class="with-unit">
+        <input type="number" id="years" min="1" max="150" step="1" inputmode="numeric" aria-label="Expected lifespan in years">
+        <span class="unit">years</span>
+      </span>
     </div>
     <p id="total-hint" class="hint"></p>
 
     <h2>Periods</h2>
-    <p class="hint">Colour stretches of your life — school, a job, a relationship, a country. Leave the end empty for something still going on. Later periods paint over earlier ones.</p>
-    <ul id="ranges"></ul>
-    <button id="add" type="button" class="secondary">+ Add period</button>
+    <p class="hint">Colour stretches of your life — school, a job, a relationship, a country. Later periods paint over earlier ones.</p>
+    <ul id="ranges" class="rows"></ul>
+    <button id="add-range" type="button" class="secondary">+ Add period</button>
+
+    <h2>Dates</h2>
+    <p class="hint">Mark a single week with a ring — a wedding, a loss, a move, a deadline. Rings sit on top of periods, so both stay visible.</p>
+    <ul id="events" class="rows"></ul>
+    <button id="add-event" type="button" class="secondary">+ Add date</button>
+
+    <h2>Theme</h2>
+    <div id="themes" role="radiogroup" aria-label="Theme"></div>
 
     <h2>Saving</h2>
     <p class="hint">There is no account and nothing is stored on any server or in your browser. Everything you enter is written into this page's address — bookmark it, or copy the link to keep it or open it on another device. Because the address <em>is</em> the data, re-save your bookmark after you change something.</p>
@@ -75,20 +81,43 @@
 </div>
 
 <template id="range-row">
-  <li class="range">
-    <input type="color" class="r-color" aria-label="Period colour">
-    <input type="text" class="r-label" placeholder="Label (e.g. University)" maxlength="60" aria-label="Period label">
-    <button type="button" class="r-del" aria-label="Delete period">
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-        <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 7h14M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/>
-      </svg>
-    </button>
-    <label class="r-dates">
-      <span>From</span><input type="date" class="r-start" aria-label="Period start">
-    </label>
-    <label class="r-dates">
-      <span>To</span><input type="date" class="r-end" aria-label="Period end (empty means ongoing)">
-    </label>
+  <li class="row">
+    <div class="row-head">
+      <input type="color" class="r-color" aria-label="Period colour">
+      <input type="text" class="r-label" placeholder="Label (e.g. University)" maxlength="60" aria-label="Period label">
+      <button type="button" class="r-del" aria-label="Delete period">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 7h14M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/>
+        </svg>
+      </button>
+    </div>
+    <div class="row-dates">
+      <span class="label">From</span>
+      <div class="date-field r-start"></div>
+    </div>
+    <div class="row-dates">
+      <span class="label">To</span>
+      <div class="date-field r-end"></div>
+      <label class="ongoing"><input type="checkbox" class="r-ongoing"> Ongoing</label>
+    </div>
+  </li>
+</template>
+
+<template id="event-row">
+  <li class="row">
+    <div class="row-head">
+      <input type="color" class="r-color" aria-label="Date colour">
+      <input type="text" class="r-label" placeholder="Label (e.g. Wedding)" maxlength="60" aria-label="Date label">
+      <button type="button" class="r-del" aria-label="Delete date">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 7h14M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/>
+        </svg>
+      </button>
+    </div>
+    <div class="row-dates">
+      <span class="label">On</span>
+      <div class="date-field r-date"></div>
+    </div>
   </li>
 </template>
 

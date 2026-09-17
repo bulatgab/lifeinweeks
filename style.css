@@ -1,22 +1,27 @@
+/* Theme colours are set on :root by app.js (see THEMES); everything else derives from them. */
 :root {
   --bg: #1a0b2e;
   --bg-2: #24123d;
   --ink: #f4effa;
-  --ink-2: rgba(244, 239, 250, 0.72);
-  --ink-3: rgba(244, 239, 250, 0.48);
-  --line: rgba(244, 239, 250, 0.12);
-  --past: #5b2fa3;
-  --future: #ff4370;
+  --accent: #ff4370;
+  --on-accent: #ffffff;
   --today: #30f0ff;
   --danger: #ff6b6b;
+
+  --ink-2: color-mix(in srgb, var(--ink) 72%, transparent);
+  --ink-3: color-mix(in srgb, var(--ink) 50%, transparent);
+  --line: color-mix(in srgb, var(--ink) 14%, transparent);
+  --well: color-mix(in srgb, var(--ink) 7%, transparent);
+  --hover: color-mix(in srgb, var(--ink) 9%, transparent);
+
   --sat: env(safe-area-inset-top, 0px);
   --sar: env(safe-area-inset-right, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
-  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 html, body {
   margin: 0;
@@ -77,13 +82,19 @@ html, body {
   white-space: nowrap;
   color: var(--ink-2);
 }
-#legend li::before {
+#legend li::before,
+#tip .tags span::before {
   content: "";
   width: 9px;
   height: 9px;
   border-radius: 50%;
   background: var(--c);
   flex: 0 0 auto;
+}
+#legend li.ev::before,
+#tip .tags span.ev::before {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--c);
 }
 
 /* ---------- floating action button ---------- */
@@ -95,16 +106,16 @@ html, body {
   height: 56px;
   border-radius: 50%;
   border: 0;
-  background: var(--future);
-  color: #fff;
+  background: var(--accent);
+  color: var(--on-accent);
   display: grid;
   place-items: center;
   cursor: pointer;
-  box-shadow: 0 6px 18px rgba(255, 67, 112, 0.45), 0 2px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 45%, transparent), 0 2px 4px rgba(0, 0, 0, 0.3);
   transition: transform 120ms ease, box-shadow 120ms ease;
   z-index: 10;
 }
-#fab:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(255, 67, 112, 0.55), 0 2px 4px rgba(0, 0, 0, 0.4); }
+#fab:hover { transform: translateY(-1px); }
 #fab:active { transform: scale(0.96); }
 #fab:focus-visible { outline: 3px solid var(--today); outline-offset: 3px; }
 
@@ -113,7 +124,7 @@ html, body {
   position: fixed;
   z-index: 5;
   pointer-events: none;
-  background: rgba(20, 8, 38, 0.94);
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px 10px;
@@ -121,19 +132,17 @@ html, body {
   line-height: 1.45;
   color: var(--ink-2);
   max-width: 260px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(6px);
 }
 #tip b { color: var(--ink); font-weight: 600; }
 #tip .tags { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 4px; }
 #tip .tags span { display: inline-flex; align-items: center; gap: 5px; }
-#tip .tags span::before {
-  content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c);
-}
+#tip .tags span::before { width: 8px; height: 8px; }
 
 /* ---------- settings panel ---------- */
 #panel { position: fixed; inset: 0; z-index: 20; }
-#backdrop { position: absolute; inset: 0; background: rgba(8, 2, 18, 0.6); }
+#backdrop { position: absolute; inset: 0; }   /* click-to-close target; deliberately not tinted */
 
 #sheet {
   position: absolute;
@@ -150,7 +159,8 @@ html, body {
   #sheet {
     inset: 0 0 0 auto;
     width: min(460px, 100%);
-    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.5);
+    border-left: 1px solid var(--line);
+    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.35);
     animation: slide 180ms ease-out;
   }
   @keyframes slide { from { transform: translateX(32px); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -180,79 +190,99 @@ html, body {
   border: 0; background: transparent; color: var(--ink-2);
   display: grid; place-items: center; cursor: pointer;
 }
-#close:hover { background: rgba(255, 255, 255, 0.08); color: var(--ink); }
+#close:hover { background: var(--hover); color: var(--ink); }
 
 .hint { color: var(--ink-3); font-size: 12.5px; margin: 6px 0 10px; }
 .hint a { color: var(--ink-2); }
 .credits { margin-top: 28px; }
 
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.field { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--ink-2); }
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.label { font-size: 12px; color: var(--ink-3); }
 .with-unit { display: flex; align-items: center; gap: 8px; }
-.with-unit input { flex: 1 1 auto; min-width: 0; }
-.unit { color: var(--ink-3); }
+.with-unit input { width: 110px; }
+.unit { color: var(--ink-3); font-size: 13px; }
 
-input[type="date"], input[type="number"], input[type="text"] {
+input[type="number"], input[type="text"], select {
   appearance: none;
   -webkit-appearance: none;
-  width: 100%;
   min-width: 0;
   height: 40px;
   padding: 0 10px;
   border-radius: 8px;
   border: 1px solid var(--line);
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--well);
   color: var(--ink);
   font: inherit;
   font-size: 16px;   /* below 16px iOS Safari zooms the page on focus */
   font-variant-numeric: tabular-nums;
 }
-input:focus-visible { outline: 2px solid var(--today); outline-offset: 1px; border-color: transparent; }
-input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.85); cursor: pointer; }
+input[type="text"] { width: 100%; }
+input:focus-visible, select:focus-visible { outline: 2px solid var(--today); outline-offset: 1px; border-color: transparent; }
 input[type="number"]::-webkit-inner-spin-button { opacity: 0.6; }
 
-/* ranges */
-#ranges { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.range {
-  display: grid;
-  grid-template-columns: 40px 1fr 1fr 36px;
-  grid-template-areas:
-    "color label label del"
-    "start start start start"
-    "end   end   end   end";
+/* three-part date field: day / month / year selects (native wheels on iOS) */
+.date-field { display: flex; gap: 6px; }
+.date-field select {
+  flex: 1 1 0;
+  padding-right: 24px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5l3.5 3.5 3.5-3.5' fill='none' stroke='%23999' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+  cursor: pointer;
+}
+.date-field select.day   { flex-basis: 64px; }
+.date-field select.month { flex-basis: 84px; }
+.date-field select.year  { flex-basis: 84px; }
+.date-field select:invalid,
+.date-field select.empty { color: var(--ink-3); }
+
+/* rows: periods and dates */
+.rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.row {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.14);
+  background: var(--well);
 }
-@media (min-width: 400px) {
-  .range {
-    grid-template-areas:
-      "color label label del"
-      "start start end   end";
-  }
-}
-.range .r-color { grid-area: color; }
-.range .r-label { grid-area: label; }
-.range .r-del   { grid-area: del; }
-.range .r-dates:nth-of-type(1) { grid-area: start; }
-.range .r-dates:nth-of-type(2) { grid-area: end; }
-.r-dates { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--ink-3); }
+.row-head { display: flex; gap: 8px; align-items: center; }
+.row-head .r-label { flex: 1 1 auto; }
+.row-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.row-dates .label { flex: 0 0 34px; }
+.row-dates .date-field { flex: 1 1 220px; }
+.ongoing { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); white-space: nowrap; cursor: pointer; }
+.ongoing input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
 .r-color {
-  width: 40px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: 8px;
+  flex: 0 0 40px; width: 40px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: 8px;
   background: transparent; cursor: pointer;
 }
 .r-color::-webkit-color-swatch-wrapper { padding: 3px; }
 .r-color::-webkit-color-swatch { border: 0; border-radius: 6px; }
 .r-color::-moz-color-swatch { border: 0; border-radius: 6px; }
 .r-del {
-  width: 36px; height: 40px; border: 0; border-radius: 8px; background: transparent;
+  flex: 0 0 36px; width: 36px; height: 40px; border: 0; border-radius: 8px; background: transparent;
   color: var(--ink-3); display: grid; place-items: center; cursor: pointer;
 }
-.r-del:hover { color: var(--danger); background: rgba(255, 107, 107, 0.12); }
-
+.r-del:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
 .empty { color: var(--ink-3); font-size: 12.5px; padding: 8px 0; margin: 0; }
+
+/* theme swatches */
+#themes { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch { position: relative; cursor: pointer; }
+.swatch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.swatch .sw {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 8px 10px 6px; border-radius: 10px; border: 2px solid transparent;
+  background: var(--sbg); color: var(--sink); font-size: 11.5px; font-weight: 600;
+  min-width: 72px;
+}
+.swatch .dots { display: flex; gap: 4px; }
+.swatch .dots i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+.swatch input:checked + .sw { border-color: var(--accent); box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 4px var(--accent); }
+.swatch input:focus-visible + .sw { outline: 2px solid var(--today); outline-offset: 2px; }
 
 /* buttons */
 button.primary, button.secondary, button.danger {
@@ -264,11 +294,11 @@ button.primary, button.secondary, button.danger {
   font-weight: 600;
   cursor: pointer;
 }
-button.primary { background: var(--future); color: #fff; }
+button.primary { background: var(--accent); color: var(--on-accent); }
 button.primary:hover { filter: brightness(1.08); }
 button.secondary { background: transparent; color: var(--ink-2); border-color: var(--line); width: 100%; margin-top: 10px; }
-button.secondary:hover { background: rgba(255, 255, 255, 0.06); color: var(--ink); }
-button.danger { background: transparent; color: var(--danger); border-color: rgba(255, 107, 107, 0.35); }
-button.danger:hover { background: rgba(255, 107, 107, 0.12); }
+button.secondary:hover { background: var(--hover); color: var(--ink); }
+button.danger { background: transparent; color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+button.danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
 button:focus-visible { outline: 2px solid var(--today); outline-offset: 2px; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; }
