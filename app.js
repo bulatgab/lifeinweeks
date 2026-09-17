@@ -348,34 +348,34 @@ function draw() {
     g.idx.push(i);
   }
 
-  // Water: one path per region, filled once. All primitives are traced
-  // clockwise so overlaps add up under the nonzero rule.
+  // Water: one path per region, filled once.
   //   scalloped — a concave lens between neighbours + a square per 2x2 block
-  //   straight  — per cell a disc-cornered square tangent to the dot, + rects
-  //               bridging neighbours + a square per 2x2 block
-  //   filled    — the same with the square grown to the whole cell (regions meet)
+  //               (a union of clockwise primitives)
+  //   straight  — the region's outline, offset inward so its edges run tangent
+  //               to the dots, every corner filleted with the dot radius
+  //   filled    — the outline of the whole cells, corners filleted, so that
+  //               neighbouring regions tile (a convex fillet on one side is the
+  //               concave fillet on the other)
   if (state.water) {
     const style = state.water;
     const R = cell * 0.4;                              // meniscus radius (scalloped)
-    const e = style === 2 ? r : cell / 2 + 0.5;        // half-extent; +0.5px so touching tiles overdraw their seam
-    const rho = style === 2 ? r : cell * 0.2;          // corner radius of the region's convex corners
     for (const [id, g] of groups) {
       ctx.fillStyle = waterColor(g.color);
       ctx.beginPath();
-      for (const i of g.idx) {
-        const right = (i + 1) % cols !== 0 && i + 1 < model.total && ids[i + 1] === id;
-        const down = i + cols < model.total && ids[i + cols] === id;
-        const block = right && down && ids[i + cols + 1] === id;
-        const [cx, cy] = centre(i);
-        if (style === 1) {
+      if (style === 1) {
+        for (const i of g.idx) {
+          const right = (i + 1) % cols !== 0 && i + 1 < model.total && ids[i + 1] === id;
+          const down = i + cols < model.total && ids[i + cols] === id;
+          const [cx, cy] = centre(i);
           if (right) bridge(cx, cy, cx + cell, cy, r, R);
           if (down) bridge(cx, cy, cx, cy + cell, r, R);
-        } else {
-          ctx.roundRect(cx - e, cy - e, 2 * e, 2 * e, rho);
-          if (right) ctx.rect(cx, cy - e, cell, 2 * e);
-          if (down) ctx.rect(cx - e, cy, 2 * e, cell);
+          if (right && down && ids[i + cols + 1] === id) ctx.rect(cx, cy, cell, cell);
         }
-        if (block) ctx.rect(cx, cy, cell, cell);
+      } else {
+        const loops = traceRegion(g.idx, (j) => ids[j] === id, cols, model.total);
+        const inset = style === 2 ? cell / 2 - r : -0.5;   // filled grows by half a pixel so touching tiles overdraw their seam
+        const rho = style === 2 ? r : cell * 0.25;
+        for (const loop of loops) roundedOutline(loop, ox, oy, cell, inset, rho);
       }
       ctx.fill();
     }
@@ -422,6 +422,88 @@ function draw() {
   }
 
   if (cur >= 0 && cur < model.total) drawFlag(...centre(cur), r, w);
+}
+
+// The boundary of a set of grid cells as closed loops of grid-corner vertices
+// (in cell units), each traced with the region on its right: outer loops run
+// clockwise and holes anticlockwise, so the nonzero rule leaves holes empty.
+// Collinear vertices are merged, so consecutive edges are always perpendicular.
+function traceRegion(cells, inRegion, cols, total) {
+  const W = cols + 1;
+  const key = (c, r) => r * W + c;
+  const edges = new Map();                    // start vertex -> [{ to, dir }]
+  const add = (c0, r0, c1, r1, dir) => {
+    const k = key(c0, r0);
+    let a = edges.get(k);
+    if (!a) edges.set(k, (a = []));
+    a.push({ to: key(c1, r1), dir });
+  };
+  for (const i of cells) {
+    const c = i % cols, r = (i - c) / cols;
+    if (!(r > 0 && inRegion(i - cols))) add(c, r, c + 1, r, 0);                           // top edge, heading right
+    if (!(c + 1 < cols && i + 1 < total && inRegion(i + 1))) add(c + 1, r, c + 1, r + 1, 1); // right edge, heading down
+    if (!(i + cols < total && inRegion(i + cols))) add(c + 1, r + 1, c, r + 1, 2);         // bottom edge, heading left
+    if (!(c > 0 && inRegion(i - 1))) add(c, r + 1, c, r, 3);                                // left edge, heading up
+  }
+  const loops = [];
+  for (const [start, list] of edges) {
+    while (list.length) {
+      const loop = [];
+      let k = start, dir = -1;
+      for (;;) {
+        const out = edges.get(k);
+        if (!out || !out.length) break;
+        // At a pinch point (two outgoing edges) prefer the right turn, then
+        // straight, then left, so loops never cross themselves.
+        let pick = 0;
+        if (dir >= 0 && out.length > 1) {
+          for (const want of [(dir + 1) % 4, dir, (dir + 3) % 4]) {
+            const j = out.findIndex(e => e.dir === want);
+            if (j >= 0) { pick = j; break; }
+          }
+        }
+        const e = out.splice(pick, 1)[0];
+        if (e.dir !== dir) loop.push([k % W, (k - (k % W)) / W]);
+        dir = e.dir;
+        k = e.to;
+        if (k === start) break;
+      }
+      // drop the start vertex if the loop merely passes straight through it
+      if (loop.length >= 4) {
+        const [a, b, z] = [loop[0], loop[1], loop[loop.length - 1]];
+        if ((a[0] === b[0] && a[0] === z[0]) || (a[1] === b[1] && a[1] === z[1])) loop.shift();
+      }
+      if (loop.length >= 4) loops.push(loop);
+    }
+  }
+  return loops;
+}
+
+// Add one traced loop to the current path: vertices converted to pixels,
+// each edge pushed `inset` toward the region (negative grows it), and every
+// corner — convex or concave — replaced by an arc of radius rho.
+function roundedOutline(loop, x0, y0, cell, inset, rho) {
+  const n = loop.length;
+  const pts = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const [c, r] = loop[i];
+    const [pc, pr] = loop[(i + n - 1) % n];
+    const [nc, nr] = loop[(i + 1) % n];
+    // The region lies to the right of travel. A horizontal edge shifts in y, a
+    // vertical one in x; the vertex takes x from its vertical edge and y from
+    // its horizontal one.
+    let x = x0 + c * cell, y = y0 + r * cell;
+    if (pr === r) y += (c > pc ? 1 : -1) * inset; else x += (r > pr ? -1 : 1) * inset;   // incoming edge
+    if (nr === r) y += (nc > c ? 1 : -1) * inset; else x += (nr > r ? -1 : 1) * inset;   // outgoing edge
+    pts[i] = [x, y];
+  }
+  const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  ctx.moveTo((pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2);
+  for (let k = 1; k <= n; k++) {
+    const prev = pts[(k - 1) % n], a = pts[k % n], b = pts[(k + 1) % n];
+    ctx.arcTo(a[0], a[1], b[0], b[1], Math.min(rho, dist(prev, a) / 2, dist(a, b) / 2));
+  }
+  ctx.closePath();
 }
 
 // The region between two neighbouring dots bounded by their own circles and two
@@ -721,6 +803,8 @@ function updateTotalHint() {
 function wireHead(li, item, list) {
   const color = li.querySelector('.r-color');
   const label = li.querySelector('.r-label');
+  li.item = item;
+  enableReorder(li.querySelector('.r-grip'), li, item, list);
   color.style.setProperty('--c', item.color);
   label.value = item.label;
   color.addEventListener('click', () => openColorPop(color, item));
@@ -729,6 +813,74 @@ function wireHead(li, item, list) {
     list.splice(list.indexOf(item), 1);
     syncRows();
     render();
+  });
+}
+
+// Reorder rows by dragging the grip (pointer events, so mouse and touch behave
+// the same) or with the arrow keys while the grip is focused. Order matters:
+// later periods paint over earlier ones, and the legend follows the list.
+let dragScroll = { dir: 0, raf: 0, y: 0, move: null };
+
+function enableReorder(grip, li, item, list) {
+  grip.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+    const rowsHost = li.parentElement;
+    li.classList.add('dragging');
+    document.body.classList.add('no-select');
+    closeColorPop();
+
+    const place = (y) => {
+      const rows = [...rowsHost.querySelectorAll('.row')].filter(el => el !== li);
+      const next = rows.find(el => { const b = el.getBoundingClientRect(); return y < b.top + b.height / 2; });
+      if (next) { if (next !== li.nextElementSibling) rowsHost.insertBefore(li, next); }
+      else if (rowsHost.lastElementChild !== li) rowsHost.append(li);
+    };
+    // Listen on the document rather than capturing the pointer: moving the row
+    // in the DOM would release capture, and the pointerup would go astray.
+    const move = (ev) => {
+      if (ev.pointerId !== e.pointerId) return;
+      dragScroll.y = ev.clientY;
+      place(ev.clientY);
+      const b = sheet.getBoundingClientRect();
+      dragScroll.dir = ev.clientY < b.top + 64 ? -1 : ev.clientY > b.bottom - 64 ? 1 : 0;
+      if (dragScroll.dir && !dragScroll.raf) tick();
+    };
+    const tick = () => {
+      if (!dragScroll.dir) { dragScroll.raf = 0; return; }
+      sheet.scrollTop += dragScroll.dir * 8;
+      place(dragScroll.y);
+      dragScroll.raf = requestAnimationFrame(tick);
+    };
+    const up = (ev) => {
+      if (ev.pointerId !== e.pointerId) return;
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', up);
+      li.classList.remove('dragging');
+      document.body.classList.remove('no-select');
+      dragScroll.dir = 0;
+      const order = [...rowsHost.querySelectorAll('.row')].map(el => el.item);
+      list.splice(0, list.length, ...order);
+      render();
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', up);
+  });
+
+  grip.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    const from = list.indexOf(item);
+    const to = e.key === 'ArrowUp' ? from - 1 : from + 1;
+    if (to < 0 || to >= list.length) return;
+    list.splice(from, 1);
+    list.splice(to, 0, item);
+    syncRows();
+    render();
+    const rowsHost = document.getElementById(list === state.ranges ? 'ranges' : 'events');
+    rowsHost.querySelectorAll('.r-grip')[to].focus({ preventScroll: true });
   });
 }
 

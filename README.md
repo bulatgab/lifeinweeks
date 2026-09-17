@@ -35,9 +35,15 @@ and Kurzgesagt's [*What Are You Doing With Your Life?*](https://www.youtube.com/
   recedes correctly on dark and light themes alike. Three edge styles:
   *scalloped* (a concave meniscus between the outer dots), *straight* (the
   edge runs tangent to the dots, whose circles form the corners) and
-  *filled* (whole cells, so neighbouring regions touch). Each is the union
-  of one primitive per cell or per adjacent pair plus a square per 2×2
-  block, traced clockwise into a single nonzero-winding path.
+  *filled* (whole cells, so neighbouring regions touch). Scalloped is a
+  union of clockwise primitives (a lens per adjacent pair, a square per 2×2
+  block). Straight and filled trace each region's actual outline — holes
+  included — offset it, and fillet every vertex with `arcTo`, so concave
+  corners are rounded as well as convex ones; in the filled style a convex
+  corner on one side is exactly the concave corner on the other, so regions
+  tile without slivers.
+- **Reorderable.** Drag a row's grip (mouse or touch) or press the arrow keys
+  on it to reorder periods and dates. Order is paint order.
 - **Everything else is under one button.** The grid is the page; a floating
   action button opens the settings sheet.
 
