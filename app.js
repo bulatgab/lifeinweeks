@@ -32,6 +32,10 @@ const I18N = {
   en: {
     locale: 'en-GB',
     title: 'Life in Weeks',
+    // <title> and <meta name="description">: what a search result shows. The
+    // English copies also sit in index.html for crawlers that don't run JS.
+    pageTitle: 'Life in Weeks — your life calendar, one dot per week',
+    description: 'See your whole life as a grid of weeks — one dot per week, past dimmed, future bright. Free, no account, nothing stored: the whole chart lives in the link.',
     panelTitle: 'Your life in weeks',
     openSettings: 'Open settings', closeSettings: 'Close settings', language: 'Language',
     birth: 'Date of birth', lifespan: 'Expected lifespan', years: 'years',
@@ -49,6 +53,9 @@ const I18N = {
     copyLink: 'Copy link', copied: 'Copied!', copyFail: 'Copy from the address bar',
     saveImage: 'Save image', reset: 'Reset everything',
     credits: 'Inspired by <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) and <a href="https://www.youtube.com/watch?v=MBRqu0YOH14" target="_blank" rel="noopener">this Kurzgesagt video</a>. <a href="https://github.com/bulatgab/lifeinweeks" target="_blank" rel="noopener">Source</a>.',
+    about: 'About',
+    about1: 'Life in Weeks draws your whole life on a single screen: one dot for every week of an 80-year life — about 4,170 of them — with the weeks already lived dimmed and the ones ahead bright. It follows the idea of Tim Urban’s essay <em>Your Life in Weeks</em> on Wait But Why and Kurzgesagt’s video <em>What Are You Doing With Your Life?</em>: seeing all your weeks at once makes time feel finite in a way no calendar does.',
+    about2: 'Enter your date of birth and expected lifespan, then colour the periods that shaped you — school, university, jobs, relationships, the places you have lived — and ring single dates such as a wedding or a move. Save the chart as an image or copy the link; no account, and nothing stored anywhere, because the whole picture is encoded in the page address. Free and open source, it works on phones and desktops, in English and Russian.',
     labelPeriod: 'Label (e.g. University)', labelDate: 'Label (e.g. Wedding)',
     from: 'From', to: 'To', on: 'On', ongoing: 'Ongoing',
     deletePeriod: 'Delete period', deleteDate: 'Delete date',
@@ -67,6 +74,8 @@ const I18N = {
   ru: {
     locale: 'ru-RU',
     title: 'Жизнь в неделях',
+    pageTitle: 'Жизнь в неделях — календарь жизни, одна точка на неделю',
+    description: 'Вся ваша жизнь на одном экране — одна точка на неделю: прошлое приглушено, будущее яркое. Бесплатно, без аккаунта, ничего не хранится: вся картина живёт в ссылке.',
     panelTitle: 'Ваша жизнь в неделях',
     openSettings: 'Открыть настройки', closeSettings: 'Закрыть настройки', language: 'Язык',
     birth: 'Дата рождения', lifespan: 'Ожидаемая продолжительность жизни', years: 'лет',
@@ -84,6 +93,9 @@ const I18N = {
     copyLink: 'Скопировать ссылку', copied: 'Скопировано!', copyFail: 'Скопируйте из адресной строки',
     saveImage: 'Сохранить картинку', reset: 'Сбросить всё',
     credits: 'По мотивам статьи <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) и <a href="https://www.youtube.com/watch?v=MBRqu0YOH14" target="_blank" rel="noopener">видео Kurzgesagt</a>. <a href="https://github.com/bulatgab/lifeinweeks" target="_blank" rel="noopener">Исходный код</a>.',
+    about: 'О проекте',
+    about1: '«Жизнь в неделях» рисует всю вашу жизнь на одном экране: по точке на каждую неделю восьмидесятилетней жизни — их около 4 170, — прожитые недели приглушены, предстоящие яркие. Идея взята из эссе Тима Урбана <em>Your Life in Weeks</em> (Wait But Why) и видео Kurzgesagt <em>What Are You Doing With Your Life?</em>: когда все недели видны разом, время ощущается конечным так, как ни один календарь не покажет.',
+    about2: 'Укажите дату рождения и ожидаемую продолжительность жизни, затем раскрасьте периоды — школу, университет, работу, отношения, города, где жили, — и отметьте кольцом отдельные даты: свадьбу, переезд. Сохраните картинку или скопируйте ссылку; ни аккаунта, ни хранения где бы то ни было — вся картина закодирована в адресе страницы. Бесплатно и с открытым исходным кодом; работает на телефоне и компьютере, на русском и английском.',
     labelPeriod: 'Название (например, Университет)', labelDate: 'Название (например, Свадьба)',
     from: 'С', to: 'По', on: 'Когда', ongoing: 'По сей день',
     deletePeriod: 'Удалить период', deleteDate: 'Удалить дату',
@@ -339,7 +351,9 @@ function nextPreset() {
 
 function applyLang() {
   document.documentElement.lang = state.lang;
-  document.title = t('title');
+  document.title = t('pageTitle');
+  document.querySelector('meta[name="description"]').content = t('description');
+  applyCanonical();
   for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
   for (const el of document.querySelectorAll('[data-i18n-html]')) el.innerHTML = t(el.dataset.i18nHtml);
   for (const el of document.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
@@ -350,6 +364,24 @@ function applyLang() {
     for (const el of tpl.content.querySelectorAll('[data-i18n-placeholder]')) el.placeholder = t(el.dataset.i18nPlaceholder);
   }
   document.querySelector(`#lang input[value="${state.lang}"]`).checked = true;
+}
+
+// The canonical URL is the bare page (plus ?lang= when a non-default language
+// was chosen explicitly), never the personal query string, so search engines
+// fold every shared chart into one entry and don't list anyone's dates. It is
+// injected here rather than written in index.html on purpose: Google indexes
+// the rendered DOM and honours a JS-inserted canonical, whereas link-preview
+// scrapers (Facebook, LinkedIn …) don't run JS and would otherwise rewrite a
+// shared chart's link to the empty page.
+function applyCanonical() {
+  let link = document.querySelector('link[rel="canonical"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'canonical';
+    document.head.append(link);
+  }
+  const lang = state.langExplicit && state.lang !== 'en' ? '?lang=' + state.lang : '';
+  link.href = location.origin + location.pathname + lang;
 }
 
 // ---------------------------------------------------------------------------

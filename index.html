@@ -5,17 +5,73 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1a0b2e">
   <meta name="color-scheme" content="dark">
-  <title>Life in Weeks</title>
-  <meta name="description" content="Your life in weeks — one dot per week. Everything you enter lives in the page address; bookmark it and it's saved.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231a0b2e'/%3E%3Ccircle cx='9' cy='9' r='3' fill='%235b2fa3'/%3E%3Ccircle cx='16' cy='9' r='3' fill='%235b2fa3'/%3E%3Ccircle cx='23' cy='9' r='3' fill='%2330f0ff'/%3E%3Ccircle cx='9' cy='16' r='3' fill='%23ff4370'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23ff4370'/%3E%3Ccircle cx='23' cy='16' r='3' fill='%23ff4370'/%3E%3Ccircle cx='9' cy='23' r='3' fill='%23ff4370'/%3E%3Ccircle cx='16' cy='23' r='3' fill='%23ff4370'/%3E%3Ccircle cx='23' cy='23' r='3' fill='%23ff4370'/%3E%3C/svg%3E">
+  <title>Life in Weeks — your life calendar, one dot per week</title>
+  <meta name="description" content="See your whole life as a grid of weeks — one dot per week, past dimmed, future bright. Free, no account, nothing stored: the whole chart lives in the link.">
+
+  <!-- Language alternates. The Russian UI is the same page with ?lang=ru; the
+       canonical link is injected by app.js (see applyLang) rather than written
+       here, so that social-preview scrapers, which don't run JS, keep linking
+       to a shared chart's full URL instead of the empty page. -->
+  <link rel="alternate" hreflang="en" href="https://bulatgab.github.io/lifeinweeks/">
+  <link rel="alternate" hreflang="ru" href="https://bulatgab.github.io/lifeinweeks/?lang=ru">
+  <link rel="alternate" hreflang="x-default" href="https://bulatgab.github.io/lifeinweeks/">
+
+  <!-- Link previews (Open Graph is read by Facebook, LinkedIn, Slack, Telegram,
+       WhatsApp, iMessage, Discord …; the twitter:* pair by X). No og:url on
+       purpose — see the note above. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Life in Weeks">
+  <meta property="og:title" content="Life in Weeks — your life calendar, one dot per week">
+  <meta property="og:description" content="See your whole life as a grid of weeks — one dot per week, past dimmed, future bright. Free, no account, nothing stored: the whole chart lives in the link.">
+  <meta property="og:image" content="https://bulatgab.github.io/lifeinweeks/og.png">
+  <meta property="og:image:width" content="2400">
+  <meta property="og:image:height" content="1260">
+  <meta property="og:image:alt" content="A grid of dots, one per week of an 80-year life: past weeks dimmed, future weeks bright, with coloured periods for school, university, work and home.">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:locale:alternate" content="ru_RU">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Life in Weeks — your life calendar, one dot per week">
+  <meta name="twitter:description" content="See your whole life as a grid of weeks — one dot per week, past dimmed, future bright. Free, no account, nothing stored: the whole chart lives in the link.">
+  <meta name="twitter:image" content="https://bulatgab.github.io/lifeinweeks/og.png">
+
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Life in Weeks",
+    "alternateName": "Жизнь в неделях",
+    "url": "https://bulatgab.github.io/lifeinweeks/",
+    "description": "Your whole life on one screen as a grid of weeks — one dot per week, the past dimmed and the future bright — with coloured periods and marked dates. Nothing is stored anywhere: the chart is encoded in the page address.",
+    "applicationCategory": "LifestyleApplication",
+    "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript",
+    "inLanguage": ["en", "ru"],
+    "isAccessibleForFree": true,
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+    "license": "https://opensource.org/license/mit",
+    "image": "https://bulatgab.github.io/lifeinweeks/og.png",
+    "screenshot": "https://bulatgab.github.io/lifeinweeks/og.png",
+    "sameAs": ["https://github.com/bulatgab/lifeinweeks"],
+    "author": { "@type": "Person", "name": "Bulat Gabidullin", "url": "https://bulatgab.github.io/" },
+    "isBasedOn": [
+      "https://waitbutwhy.com/2014/05/life-weeks.html",
+      "https://www.youtube.com/watch?v=MBRqu0YOH14"
+    ]
+  }
+  </script>
 </head>
 <body>
+<!-- Every piece of English text below is also in I18N.en in app.js, which
+     rewrites it on boot (unchanged for EN, translated for RU). Keep the two in
+     sync: the copy here is what non-JS crawlers and link scrapers index. -->
 
 <main id="stage">
   <canvas id="grid" aria-label="Your life in weeks, one dot per week"></canvas>
   <footer id="bar">
-    <p id="stats" aria-live="polite"></p>
+    <p id="stats" aria-live="polite">One dot per week. <b>Tap the button to begin.</b></p>
     <ul id="legend"></ul>
   </footer>
 </main>
@@ -62,12 +118,12 @@
     <p id="total-hint" class="hint"></p>
 
     <h2 data-i18n="periods">Periods</h2>
-    <p class="hint" data-i18n="periodsHint"></p>
+    <p class="hint" data-i18n="periodsHint">Colour stretches of your life — school, a job, a relationship, a home. Later periods paint over earlier ones. Drag the grip to reorder.</p>
     <ul id="ranges" class="rows"></ul>
     <button id="add-range" type="button" class="secondary" data-i18n="addPeriod">+ Add period</button>
 
     <h2 data-i18n="dates">Dates</h2>
-    <p class="hint" data-i18n="datesHint"></p>
+    <p class="hint" data-i18n="datesHint">Mark a single week with a ring — a wedding, a loss, a move, a deadline. Rings sit on top of periods, so both stay visible.</p>
     <ul id="events" class="rows"></ul>
     <button id="add-event" type="button" class="secondary" data-i18n="addDate">+ Add date</button>
 
@@ -83,7 +139,7 @@
     </div>
 
     <h2 data-i18n="saving">Saving</h2>
-    <p class="hint" data-i18n-html="savingHint"></p>
+    <p class="hint" data-i18n-html="savingHint">There is no account and nothing is stored on any server or in your browser. Everything you enter is written into this page’s address — bookmark it, or copy the link to keep it or open it on another device. Because the address <em>is</em> the data, re-save your bookmark after you change something.</p>
     <div class="actions">
       <button id="copy" type="button" class="primary" data-i18n="copyLink">Copy link</button>
       <button id="export" type="button" class="primary" data-i18n="saveImage">Save image</button>
@@ -93,7 +149,13 @@
       <div class="presets"></div>
     </div>
 
-    <p class="hint credits" data-i18n-html="credits"></p>
+    <section class="about">
+      <h2 data-i18n="about">About</h2>
+      <p class="hint" data-i18n-html="about1">Life in Weeks draws your whole life on a single screen: one dot for every week of an 80-year life — about 4,170 of them — with the weeks already lived dimmed and the ones ahead bright. It follows the idea of Tim Urban’s essay <em>Your Life in Weeks</em> on Wait But Why and Kurzgesagt’s video <em>What Are You Doing With Your Life?</em>: seeing all your weeks at once makes time feel finite in a way no calendar does.</p>
+      <p class="hint" data-i18n-html="about2">Enter your date of birth and expected lifespan, then colour the periods that shaped you — school, university, jobs, relationships, the places you have lived — and ring single dates such as a wedding or a move. Save the chart as an image or copy the link; no account, and nothing stored anywhere, because the whole picture is encoded in the page address. Free and open source, it works on phones and desktops, in English and Russian.</p>
+    </section>
+
+    <p class="hint credits" data-i18n-html="credits">Inspired by <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) and <a href="https://www.youtube.com/watch?v=MBRqu0YOH14" target="_blank" rel="noopener">this Kurzgesagt video</a>. <a href="https://github.com/bulatgab/lifeinweeks" target="_blank" rel="noopener">Source</a>.</p>
   </section>
 </div>
 

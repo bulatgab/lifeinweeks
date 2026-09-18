@@ -93,6 +93,36 @@ python3 -m http.server 8080
 GitHub Pages serves the `main` branch root directly. `.nojekyll` tells Pages to
 skip its Jekyll pass and serve the files verbatim.
 
+## Search engines and link previews
+
+- `index.html` carries the English UI text *in the markup* (hints, the About
+  section, the empty-state line), not just in `I18N.en` — crawlers and
+  link-preview scrapers that don't run JavaScript only see the file. `applyLang()`
+  rewrites it on boot, so **when you change an English string, change it in both
+  places.**
+- The canonical link is injected by `applyCanonical()` in `app.js`, never written
+  in the HTML, and always points at the bare page (plus `?lang=ru` when chosen).
+  Google reads it from the rendered DOM; Facebook/LinkedIn scrapers don't run JS,
+  so a shared chart keeps linking to its full URL rather than the empty page.
+  For the same reason there is no `og:url`.
+- `og.png` (2400×1260) is a headless-Chrome screenshot of the app itself with a
+  sample life, the floating button hidden. To regenerate after a visual change,
+  serve the folder and run:
+
+  ```sh
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
+    --hide-scrollbars --window-size=1200,630 --force-device-scale-factor=2 \
+    --virtual-time-budget=4000 --screenshot=og.png \
+    'http://localhost:8080/?b=1990-06-15&r=1996-09-01~2007-06-30~ffb340~School&r=2007-09-01~2012-06-30~22c9a8~University&r=2012-09-01~2018-03-31~4f9df9~First%20job&r=2018-04-01~~b45309~Berlin&d=2016-08-20~f0f0f5~Wedding'
+  ```
+
+  (add `<style>#fab{display:none}</style>` to a scratch copy of `index.html`
+  first, or crop the button out.)
+- `sitemap.xml` lists the one page; submit it in Google Search Console and Bing
+  Webmaster Tools. A `robots.txt` here would be ignored — crawlers only read the
+  one at the host root, `https://bulatgab.github.io/robots.txt`, which lives in
+  the `bulatgab.github.io` repo and already allows everything.
+
 ## Licence
 
 MIT — see [LICENSE](LICENSE).
