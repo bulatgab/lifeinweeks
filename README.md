@@ -6,7 +6,8 @@ and the future bright.
 **Live:** https://bulatgab.github.io/lifeinweeks/
 
 Inspired by Wait But Why's [*Your Life in Weeks*](https://waitbutwhy.com/2014/05/life-weeks.html)
-and Kurzgesagt's [*What Are You Doing With Your Life?*](https://www.youtube.com/watch?v=MBRqu0YOH14).
+and Kurzgesagt's [*When This Number Hits 5200, You Will Be Dead*](https://www.youtube.com/watch?v=JXeJANDKwDc)
+(originally titled *What Are You Doing With Your Life? The Tail End*).
 
 ## What makes this one different
 
@@ -44,13 +45,25 @@ and Kurzgesagt's [*What Are You Doing With Your Life?*](https://www.youtube.com/
   tile without slivers.
 - **Reorderable.** Drag a row's grip (mouse or touch) or press the arrow keys
   on it to reorder periods and dates. Order is paint order.
-- **Image export.** "Save image" renders the chart plus the stats and legend
-  off-screen at 2–3× and hands it to the share sheet on touch devices (on
-  iOS that offers "Save Image") or downloads a PNG elsewhere.
+- **First open.** With no date of birth in the URL the chart shows a sample
+  life — a 36-year-old, built relative to today so it never ages, in the
+  current theme's colours — behind a welcome dialog with the About text, a
+  language switch and "Continue". The sample lives only in the model: the URL
+  and the settings form stay empty until you enter your own date.
+- **Sharing.** A second, smaller button next to the settings one opens two
+  options: copy the link (with a note that anyone opening it sees every date
+  and label, because the link *is* the data) or save an image. The image is
+  the chart plus the stats and legend rendered off-screen at 2–3×, handed to
+  the share sheet on touch devices (on iOS that offers "Save Image") or
+  downloaded as a PNG elsewhere. The share button is hidden while the sample
+  chart is showing.
 - **English and Russian.** Detected from the browser; an explicit choice is
-  stored as `?lang=`. Dates, numbers and plurals follow the language.
-- **Everything else is under one button.** The grid is the page; a floating
-  action button opens the settings sheet.
+  stored as `?lang=`. The picker is a "translate" icon (in the welcome dialog
+  and the sheet header) that drops a two-entry menu styled like the rest of the
+  app. Dates, numbers and plurals follow the language.
+- **Everything else is under two buttons.** The grid is the page; a floating
+  action button opens the settings sheet, a smaller one next to it the share
+  options.
 
 ## URL format
 
@@ -95,11 +108,12 @@ skip its Jekyll pass and serve the files verbatim.
 
 ## Search engines and link previews
 
-- `index.html` carries the English UI text *in the markup* (hints, the About
-  section, the empty-state line), not just in `I18N.en` — crawlers and
-  link-preview scrapers that don't run JavaScript only see the file. `applyLang()`
-  rewrites it on boot, so **when you change an English string, change it in both
-  places.**
+- `index.html` carries the English UI text *in the markup* (the welcome/About
+  dialog, the hints, the share explanations), not just in `I18N.en` — crawlers
+  and link-preview scrapers that don't run JavaScript only see the file.
+  `applyLang()` rewrites it on boot, so **when you change an English string,
+  change it in both places.** On the bare URL the welcome dialog is open, so
+  its text is what a rendering crawler sees as the page.
 - The canonical link is injected by `applyCanonical()` in `app.js`, never written
   in the HTML, and always points at the bare page (plus `?lang=ru` when chosen).
   Google reads it from the rendered DOM; Facebook/LinkedIn scrapers don't run JS,

@@ -48,27 +48,31 @@ const I18N = {
     noDates: 'No dates yet.', addDate: '+ Add date',
     theme: 'Theme', themes: { dusk: 'Dusk', ink: 'Ink', slate: 'Slate', paper: 'Paper' },
     connect: 'Connect dots', water0: 'Off', water1: 'Scalloped', water2: 'Straight', water3: 'Filled',
-    saving: 'Saving',
-    savingHint: 'There is no account and nothing is stored on any server or in your browser. Everything you enter is written into this page’s address — bookmark it, or copy the link to keep it or open it on another device. Because the address <em>is</em> the data, re-save your bookmark after you change something.',
+    share: 'Share', openShare: 'Share the chart', close: 'Close',
     copyLink: 'Copy link', copied: 'Copied!', copyFail: 'Copy from the address bar',
-    saveImage: 'Save image', reset: 'Reset everything',
-    credits: 'Inspired by <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) and <a href="https://www.youtube.com/watch?v=MBRqu0YOH14" target="_blank" rel="noopener">this Kurzgesagt video</a>. <a href="https://github.com/bulatgab/lifeinweeks" target="_blank" rel="noopener">Source</a>.',
-    about: 'About',
-    about1: 'Life in Weeks draws your whole life on a single screen: one dot for every week of an 80-year life — about 4,170 of them — with the weeks already lived dimmed and the ones ahead bright. It follows the idea of Tim Urban’s essay <em>Your Life in Weeks</em> on Wait But Why and Kurzgesagt’s video <em>What Are You Doing With Your Life?</em>: seeing all your weeks at once makes time feel finite in a way no calendar does.',
-    about2: 'Enter your date of birth and expected lifespan, then colour the periods that shaped you — school, university, jobs, relationships, the places you have lived — and ring single dates such as a wedding or a move. Save the chart as an image or copy the link; no account, and nothing stored anywhere, because the whole picture is encoded in the page address. Free and open source, it works on phones and desktops, in English and Russian.',
+    shareLinkHint: 'Anyone who opens the link sees the whole chart — every period, date and label — because the link is the data. Nothing passes through a server.',
+    saveImage: 'Save image',
+    shareImageHint: 'A PNG of the chart with the stats and legend — handy for messaging apps and social media. It shows exactly what you see, nothing more.',
+    resetTitle: 'Reset', reset: 'Reset everything',
+    // About / welcome dialog. The English copy is also in index.html for
+    // crawlers that don't run JS — keep the two in sync.
+    aboutLead: 'Life in Weeks draws your whole life, one dot for every week. Inspired by the essay <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> on Wait But Why and the video <a href="https://www.youtube.com/watch?v=JXeJANDKwDc" target="_blank" rel="noopener">When This Number Hits 5200, You Will Be Dead</a> from Kurzgesagt.',
+    aboutPrivacy: '<b>Nothing is stored anywhere. There is no account, no server and nothing kept in your browser: the whole chart is encoded in the page address. Bookmark it or copy the link to keep it, and re-save the bookmark after you change something.</b>',
+    aboutHow: 'Enter your date of birth and expected lifespan, then colour the periods that shaped you — school, university, jobs, relationships, the places you have lived — and ring single dates such as a wedding or a move. Share the result as a link or save it as an image.',
+    aboutFoot: 'Free and open source. Works on phones and desktops. Supports English and Russian. <a href="https://github.com/bulatgab/lifeinweeks/issues" target="_blank" rel="noopener">Report an issue</a>.',
+    continue: 'Continue', aboutOpen: 'About this app',
     labelPeriod: 'Label (e.g. University)', labelDate: 'Label (e.g. Wedding)',
     from: 'From', to: 'To', on: 'On', ongoing: 'Ongoing',
     deletePeriod: 'Delete period', deleteDate: 'Delete date',
     drag: 'Drag to reorder (or use the arrow keys)', colour: 'Colour', customColour: 'Custom colour',
     day: 'Day', month: 'Month', year: 'Year',
     stats: (lived, left, pct, total) => `<b>${lived}</b> weeks lived · <b>${left}</b> left · ${pct}% of ${total}`,
-    statsEmpty: 'One dot per week. <b>Tap the button to begin.</b>',
-    placeholder: 'Set your date of birth to see your weeks',
+    statsDemo: (lived, left, pct, total) => `<b class="tag">Example</b> ${lived} weeks lived · ${left} left · ${pct}% of ${total}`,
+    sample: { school: 'School', uni: 'University', job: 'First job', home: 'Berlin', wedding: 'Wedding' },
     today: 'TODAY',
     weekOf: (n, total) => `Week ${n} of ${total}`,
     lived: 'lived', thisWeek: 'this week', ahead: 'ahead', age: (a) => `age ${a}`,
     untitledPeriod: 'Untitled period', untitledDate: 'Untitled date', now: 'now',
-    past: 'Past', future: 'Future',
     imageName: 'life-in-weeks.png',
   },
   ru: {
@@ -88,27 +92,29 @@ const I18N = {
     noDates: 'Дат пока нет.', addDate: '+ Добавить дату',
     theme: 'Тема', themes: { dusk: 'Сумерки', ink: 'Чернила', slate: 'Графит', paper: 'Бумага' },
     connect: 'Соединить точки', water0: 'Нет', water1: 'Волной', water2: 'Прямо', water3: 'Заливкой',
-    saving: 'Сохранение',
-    savingHint: 'Ни аккаунта, ни сервера, ни хранения в браузере. Всё, что вы вводите, записывается в адрес этой страницы — добавьте его в закладки или скопируйте ссылку, чтобы сохранить или открыть на другом устройстве. Адрес <em>и есть</em> данные, поэтому после изменений сохраните закладку заново.',
+    share: 'Поделиться', openShare: 'Поделиться картой', close: 'Закрыть',
     copyLink: 'Скопировать ссылку', copied: 'Скопировано!', copyFail: 'Скопируйте из адресной строки',
-    saveImage: 'Сохранить картинку', reset: 'Сбросить всё',
-    credits: 'По мотивам статьи <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) и <a href="https://www.youtube.com/watch?v=MBRqu0YOH14" target="_blank" rel="noopener">видео Kurzgesagt</a>. <a href="https://github.com/bulatgab/lifeinweeks" target="_blank" rel="noopener">Исходный код</a>.',
-    about: 'О проекте',
-    about1: '«Жизнь в неделях» рисует всю вашу жизнь на одном экране: по точке на каждую неделю восьмидесятилетней жизни — их около 4 170, — прожитые недели приглушены, предстоящие яркие. Идея взята из эссе Тима Урбана <em>Your Life in Weeks</em> (Wait But Why) и видео Kurzgesagt <em>What Are You Doing With Your Life?</em>: когда все недели видны разом, время ощущается конечным так, как ни один календарь не покажет.',
-    about2: 'Укажите дату рождения и ожидаемую продолжительность жизни, затем раскрасьте периоды — школу, университет, работу, отношения, города, где жили, — и отметьте кольцом отдельные даты: свадьбу, переезд. Сохраните картинку или скопируйте ссылку; ни аккаунта, ни хранения где бы то ни было — вся картина закодирована в адресе страницы. Бесплатно и с открытым исходным кодом; работает на телефоне и компьютере, на русском и английском.',
+    shareLinkHint: 'Тот, кто откроет ссылку, увидит всю карту — каждый период, дату и подпись, потому что ссылка и есть данные. Через сервер ничего не проходит.',
+    saveImage: 'Сохранить картинку',
+    shareImageHint: 'PNG-картинка с картой, статистикой и легендой — удобно для мессенджеров и соцсетей. На ней ровно то, что вы видите, и ничего больше.',
+    resetTitle: 'Сброс', reset: 'Сбросить всё',
+    aboutLead: '«Жизнь в неделях» рисует всю вашу жизнь — по точке на каждую неделю. По мотивам эссе <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) и видео <a href="https://www.youtube.com/watch?v=JXeJANDKwDc" target="_blank" rel="noopener">When This Number Hits 5200, You Will Be Dead</a> от Kurzgesagt.',
+    aboutPrivacy: '<b>Ничего нигде не хранится. Ни аккаунта, ни сервера, ни данных в браузере: вся картина закодирована в адресе страницы. Добавьте его в закладки или скопируйте ссылку, чтобы сохранить, — и после изменений сохраните закладку заново.</b>',
+    aboutHow: 'Укажите дату рождения и ожидаемую продолжительность жизни, затем раскрасьте периоды — школу, университет, работу, отношения, города, где жили, — и отметьте кольцом отдельные даты: свадьбу, переезд. Поделитесь результатом ссылкой или сохраните картинкой.',
+    aboutFoot: 'Бесплатно, исходный код открыт. Работает на телефоне и компьютере. Поддерживаются русский и английский. <a href="https://github.com/bulatgab/lifeinweeks/issues" target="_blank" rel="noopener">Сообщить об ошибке</a>.',
+    continue: 'Продолжить', aboutOpen: 'О приложении',
     labelPeriod: 'Название (например, Университет)', labelDate: 'Название (например, Свадьба)',
     from: 'С', to: 'По', on: 'Когда', ongoing: 'По сей день',
     deletePeriod: 'Удалить период', deleteDate: 'Удалить дату',
     drag: 'Перетащите, чтобы изменить порядок (или используйте стрелки)', colour: 'Цвет', customColour: 'Свой цвет',
     day: 'День', month: 'Месяц', year: 'Год',
     stats: (lived, left, pct, total, w) => `<b>${lived}</b> ${w(lived)} прожито · <b>${left}</b> осталось · ${pct}% из ${total}`,
-    statsEmpty: 'Одна точка — одна неделя. <b>Нажмите кнопку, чтобы начать.</b>',
-    placeholder: 'Укажите дату рождения, чтобы увидеть свои недели',
+    statsDemo: (lived, left, pct, total, w) => `<b class="tag">Пример</b> ${lived} ${w(lived)} прожито · ${left} осталось · ${pct}% из ${total}`,
+    sample: { school: 'Школа', uni: 'Университет', job: 'Первая работа', home: 'Берлин', wedding: 'Свадьба' },
     today: 'СЕГОДНЯ',
     weekOf: (n, total) => `Неделя ${n} из ${total}`,
     lived: 'прожита', thisWeek: 'текущая', ahead: 'впереди', age: (a) => `возраст ${a}`,
     untitledPeriod: 'Период без названия', untitledDate: 'Дата без названия', now: 'сейчас',
-    past: 'Прошлое', future: 'Будущее',
     imageName: 'life-in-weeks.png',
   },
 };
@@ -363,7 +369,8 @@ function applyLang() {
     for (const el of tpl.content.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
     for (const el of tpl.content.querySelectorAll('[data-i18n-placeholder]')) el.placeholder = t(el.dataset.i18nPlaceholder);
   }
-  document.querySelector(`#lang input[value="${state.lang}"]`).checked = true;
+  for (const b of document.querySelectorAll('.langlist [data-lang]')) b.setAttribute('aria-checked', String(b.dataset.lang === state.lang));
+  for (const el of document.querySelectorAll('[data-i18n-title]')) el.title = t(el.dataset.i18nTitle);
 }
 
 // The canonical URL is the bare page (plus ?lang= when a non-default language
@@ -388,11 +395,36 @@ function applyCanonical() {
 // Model: which week is which colour
 // ---------------------------------------------------------------------------
 
+// With no date of birth there is nothing of the user's to draw, so the chart
+// shows a sample life instead — a 36-year-old, built relative to today so it
+// never ages, coloured with the current theme's presets. The sample lives only
+// in the model: state (and therefore the URL and the settings form) stays empty.
+function sampleState() {
+  const th = theme(), p = th.presets, s = t('sample');
+  // Four periods take the first presets (Slate has only four); the ring uses
+  // the picker's light neutral (dark on Paper) so it reads on any period colour.
+  const neutral = extendedColors(th).at(-2);
+  const birth = addYears(todayUTC(), -36);
+  const at = (y) => addYears(birth, y);
+  return {
+    birth, years: DEFAULT_YEARS,
+    ranges: [
+      { start: at(6),  end: at(17), color: p[0], label: s.school },
+      { start: at(17), end: at(22), color: p[1], label: s.uni },
+      { start: at(22), end: at(28), color: p[2], label: s.job },
+      { start: at(28), end: null,   color: p[4] ?? p[3], label: s.home },
+    ],
+    events: [{ date: at(26), color: neutral, label: s.wedding }],
+  };
+}
+
+const chartSource = () => state.birth === null ? sampleState() : state;
+
 function computeModel() {
-  if (state.birth === null) return null;
+  const src = chartSource();
   const th = theme();
-  const birth = state.birth;
-  const death = addYears(birth, state.years);
+  const birth = src.birth;
+  const death = addYears(birth, src.years);
   const total = Math.max(1, Math.floor((death - birth) / WEEK));
   const today = todayUTC();
   const weekOf = (ts) => Math.floor((ts - birth) / WEEK);
@@ -402,7 +434,7 @@ function computeModel() {
   for (let i = 0; i < total; i++) colors[i] = i < cur ? th.past : th.future;
 
   const covering = new Array(total);
-  for (const r of state.ranges) {
+  for (const r of src.ranges) {
     if (r.start === null) continue;
     const endT = r.end === null ? today : r.end;
     if (endT < r.start) continue;
@@ -415,13 +447,13 @@ function computeModel() {
   }
 
   const marks = new Array(total);
-  for (const e of state.events) {
+  for (const e of src.events) {
     const w = weekOf(e.date);
     if (w >= 0 && w < total) (marks[w] ||= []).push(e);
   }
 
   const lived = clamp(cur, 0, total);
-  return { birth, death, total, today, cur, lived, left: total - lived, colors, covering, marks, weekOf };
+  return { birth, death, total, today, cur, lived, left: total - lived, colors, covering, marks, weekOf, demo: src !== state };
 }
 
 // The densest grid of n square cells that fits a W x H box.
@@ -467,16 +499,6 @@ function draw() {
 // layout so the caller can hit-test. Shared by the screen and the image export.
 function paintGrid(c, w, h) {
   const th = theme();
-  if (!model) {
-    c.fillStyle = th.ink;
-    c.globalAlpha = 0.55;
-    c.font = '500 15px system-ui, sans-serif';
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.fillText(t('placeholder'), w / 2, h / 2);
-    c.globalAlpha = 1;
-    return null;
-  }
 
   const pad = 14;
   const top = 30;
@@ -706,26 +728,20 @@ function drawFlag(c, cx, cy, r, w) {
   c.fillText(label, bx + bw / 2, by + bh / 2 + 0.5);
 }
 
-// Legend entries: base regions first, then periods, then dates.
+// Legend entries: periods, then dates.
 function legendEntries() {
-  const th = theme();
+  const src = chartSource();
   return [
-    { color: th.past, text: t('past') },
-    { color: th.future, text: t('future') },
-    ...state.ranges.filter(r => r.start !== null).map(r => ({
+    ...src.ranges.filter(r => r.start !== null).map(r => ({
       color: r.color, text: r.label || `${fmtDate(r.start)} – ${r.end === null ? t('now') : fmtDate(r.end)}` })),
-    ...state.events.map(e => ({ color: e.color, text: e.label || fmtDate(e.date), ring: true })),
+    ...src.events.map(e => ({ color: e.color, text: e.label || fmtDate(e.date), ring: true })),
   ];
 }
 
 function renderStats() {
-  if (!model) {
-    statsEl.innerHTML = t('statsEmpty');
-    legendEl.replaceChildren();
-    return;
-  }
   const pct = Math.round((model.lived / model.total) * 100);
-  statsEl.innerHTML = t('stats', fmtInt(model.lived), fmtInt(model.left), pct, fmtInt(model.total));
+  statsEl.innerHTML = t(model.demo ? 'statsDemo' : 'stats', fmtInt(model.lived), fmtInt(model.left), pct, fmtInt(model.total));
+  shareFab.hidden = model.demo;   // nothing of the user's to share yet
   legendEl.replaceChildren(...legendEntries().map(en => {
     const li = document.createElement('li');
     li.style.setProperty('--c', en.color);
@@ -755,7 +771,6 @@ new ResizeObserver(() => {
 // ---------------------------------------------------------------------------
 
 function exportImage() {
-  if (!model) return;
   const th = theme();
   const rect = canvas.getBoundingClientRect();
   const w = Math.round(rect.width), gh = Math.round(rect.height);
@@ -977,7 +992,9 @@ const rangesEl = document.getElementById('ranges');
 const eventsEl = document.getElementById('events');
 const themesEl = document.getElementById('themes');
 const waterEl = document.getElementById('water');
-const langEl = document.getElementById('lang');
+const shareFab = document.getElementById('share-fab');
+const sharePop = document.getElementById('sharepop');
+const welcome = document.getElementById('welcome');
 const rangeTpl = document.getElementById('range-row');
 const eventTpl = document.getElementById('event-row');
 
@@ -1000,6 +1017,7 @@ function openPanel() {
 
 function closePanel() {
   closeColorPop();
+  closeLangMenus();
   panel.hidden = true;
   fab.setAttribute('aria-expanded', 'false');
   fab.focus({ preventScroll: true });
@@ -1228,15 +1246,44 @@ waterEl.addEventListener('change', (e) => {
   if (e.target.name === 'water') { state.water = +e.target.value; render(); }
 });
 
-langEl.addEventListener('change', (e) => {
-  if (e.target.name !== 'lang') return;
-  state.lang = e.target.value;
+function setLang(lang) {
+  state.lang = lang;
   state.langExplicit = true;
   applyLang();
   birthField.relabel();
   syncForm();
   render();
-});
+}
+
+// Language menus (welcome dialog and settings sheet): a button that drops a
+// small list; the current language is marked with a dot.
+function closeLangMenus() {
+  for (const m of document.querySelectorAll('.langmenu')) {
+    m.querySelector('.langlist').hidden = true;
+    m.querySelector('.langbtn').setAttribute('aria-expanded', 'false');
+  }
+}
+const langMenuOpen = () => [...document.querySelectorAll('.langlist')].some(l => !l.hidden);
+for (const m of document.querySelectorAll('.langmenu')) {
+  const btn = m.querySelector('.langbtn'), list = m.querySelector('.langlist');
+  btn.addEventListener('click', () => {
+    const open = list.hidden;
+    closeLangMenus();
+    if (open) {
+      list.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      list.querySelector('[aria-checked="true"]').focus({ preventScroll: true });
+    }
+  });
+  list.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-lang]');
+    if (!b) return;
+    setLang(b.dataset.lang);
+    closeLangMenus();
+    btn.focus({ preventScroll: true });
+  });
+}
+document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.langmenu')) closeLangMenus(); });
 
 yearsIn.addEventListener('input', () => {
   const v = parseInt(yearsIn.value, 10);
@@ -1263,7 +1310,7 @@ document.getElementById('add-event').addEventListener('click', () => {
   addItem(state.events, { date: todayUTC(), color: nextPreset(), label: '' }, eventsEl);
 });
 
-document.getElementById('copy').addEventListener('click', async (e) => {
+document.getElementById('share-link').addEventListener('click', async (e) => {
   const btn = e.currentTarget;
   const old = btn.textContent;
   try {
@@ -1275,7 +1322,39 @@ document.getElementById('copy').addEventListener('click', async (e) => {
   setTimeout(() => { btn.textContent = old; }, 1800);
 });
 
-document.getElementById('export').addEventListener('click', exportImage);
+document.getElementById('share-image').addEventListener('click', exportImage);
+
+function openShare() {
+  sharePop.hidden = false;
+  shareFab.setAttribute('aria-expanded', 'true');
+  hideTip();
+  document.getElementById('share-link').focus({ preventScroll: true });
+}
+function closeShare() {
+  sharePop.hidden = true;
+  shareFab.setAttribute('aria-expanded', 'false');
+  shareFab.focus({ preventScroll: true });
+}
+shareFab.addEventListener('click', openShare);
+document.getElementById('share-close').addEventListener('click', closeShare);
+sharePop.querySelector('.backdrop').addEventListener('click', closeShare);
+
+// Welcome / About dialog: shown on first open (no date of birth in the URL)
+// over the sample chart, and again on demand from the sheet's "About" link.
+function openWelcome(asAbout = false) {
+  document.getElementById('continue').textContent = t(asAbout ? 'close' : 'continue');
+  welcome.hidden = false;
+  hideTip();
+  welcome.querySelector('.card').focus({ preventScroll: true });
+}
+function closeWelcome() {
+  closeLangMenus();
+  welcome.hidden = true;
+  fab.focus({ preventScroll: true });
+}
+document.getElementById('continue').addEventListener('click', closeWelcome);
+welcome.querySelector('.backdrop').addEventListener('click', closeWelcome);
+document.getElementById('about-open').addEventListener('click', () => openWelcome(true));
 
 document.getElementById('reset').addEventListener('click', () => {
   state.birth = null;
@@ -1292,8 +1371,11 @@ fab.addEventListener('click', openPanel);
 closeBtn.addEventListener('click', closePanel);
 document.getElementById('backdrop').addEventListener('click', closePanel);
 document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape' || panel.hidden) return;
-  popTarget ? closeColorPop() : closePanel();
+  if (e.key !== 'Escape') return;
+  if (langMenuOpen()) closeLangMenus();
+  else if (!welcome.hidden) closeWelcome();
+  else if (!sharePop.hidden) closeShare();
+  else if (!panel.hidden) popTarget ? closeColorPop() : closePanel();
 });
 
 // ---------------------------------------------------------------------------
@@ -1305,7 +1387,7 @@ applyTheme();
 applyLang();
 birthField.relabel();
 render();
-if (state.birth === null) openPanel();
+if (state.birth === null) openWelcome();
 
 setInterval(() => {
   if (model && todayUTC() !== model.today) render();

@@ -57,11 +57,16 @@ html, body {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 14px;
-  padding: 6px 84px 8px 16px;  /* right padding leaves room for the FAB */
+  padding: 6px 140px 8px 16px;  /* right padding leaves room for both FABs */
   font-size: 12px;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
   min-height: 72px;  /* tall enough to house the FAB so it never covers dots */
+}
+#stats .tag {
+  display: inline-block; margin-right: 4px; padding: 1px 7px; border-radius: 999px;
+  background: var(--accent); color: var(--on-accent); font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; vertical-align: 1px;
 }
 
 #stats { margin: 0; white-space: nowrap; }
@@ -119,6 +124,28 @@ html, body {
 #fab:active { transform: scale(0.96); }
 #fab:focus-visible { outline: 3px solid var(--today); outline-offset: 3px; }
 
+/* the smaller share button sits to the left of the settings FAB, centred on it */
+#share-fab {
+  position: fixed;
+  right: calc(82px + var(--sar));
+  bottom: calc(14px + var(--sab));
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--ink-2);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  transition: transform 120ms ease, color 120ms ease;
+  z-index: 10;
+}
+#share-fab:hover { transform: translateY(-1px); color: var(--ink); }
+#share-fab:active { transform: scale(0.96); }
+#share-fab:focus-visible { outline: 3px solid var(--today); outline-offset: 3px; }
+
 /* ---------- tooltip ---------- */
 #tip {
   position: fixed;
@@ -143,6 +170,59 @@ html, body {
 /* ---------- settings panel ---------- */
 #panel { position: fixed; inset: 0; z-index: 20; }
 #backdrop { position: absolute; inset: 0; }   /* click-to-close target; deliberately not tinted */
+
+/* ---------- welcome / about and share dialogs ---------- */
+#welcome, #sharepop { position: fixed; inset: 0; z-index: 30; }
+#welcome .backdrop, #sharepop .backdrop {
+  position: absolute; inset: 0;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  backdrop-filter: blur(3px);
+}
+#welcome .card, #sharepop .card {
+  position: absolute;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  padding: 18px 20px 20px;
+  outline: none;
+}
+#welcome .card {
+  left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(520px, calc(100% - 24px - var(--sal) - var(--sar)));
+  max-height: calc(100% - 24px - var(--sat) - var(--sab));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  animation: rise 180ms ease-out;
+}
+#welcome header, #sharepop header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px;
+}
+#welcome h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+#welcome p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+#welcome p a { color: var(--ink); }
+#welcome .note { color: var(--ink); }
+#welcome .note b { font-weight: 600; }
+#welcome p.hint { font-size: 12.5px; color: var(--ink-3); margin-bottom: 6px; }
+#welcome p.hint:last-of-type { margin-bottom: 16px; }
+#welcome #continue { width: 100%; }
+
+#sharepop .card {
+  right: calc(16px + var(--sar));
+  bottom: calc(76px + var(--sab));
+  width: min(380px, calc(100% - 32px - var(--sal) - var(--sar)));
+  animation: rise 180ms ease-out;
+}
+#sharepop h2 { font-size: 16px; font-weight: 700; margin: 0; }
+#sharepop .x {
+  width: 36px; height: 36px; margin-right: -8px; border-radius: 50%; border: 0; background: transparent;
+  color: var(--ink-2); display: grid; place-items: center; cursor: pointer;
+}
+#sharepop .x:hover { background: var(--hover); color: var(--ink); }
+#sharepop .opt + .opt { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+#sharepop .opt button { width: 100%; }
+#sharepop .opt .hint { margin: 8px 0 0; }
+@media (prefers-reduced-motion: reduce) { #welcome .card, #sharepop .card { animation: none; } }
 
 #sheet {
   position: absolute;
@@ -201,7 +281,12 @@ html, body {
 
 .hint { color: var(--ink-3); font-size: 12.5px; margin: 6px 0 10px; }
 .hint a { color: var(--ink-2); }
-.credits { margin-top: 28px; }
+.foot { margin-top: 28px; }
+.linkish {
+  padding: 0; border: 0; background: none; font: inherit; color: var(--ink-2);
+  text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
+}
+.linkish:hover { color: var(--ink); }
 
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
 .label { font-size: 12px; color: var(--ink-3); }
@@ -309,9 +394,28 @@ input[type="number"]::-webkit-inner-spin-button { opacity: 0.6; }
 #colorpop .pc:focus-visible { outline: 2px solid var(--today); outline-offset: 2px; }
 
 /* segmented control */
-.seg.mini { width: auto; flex: 0 0 auto; }
-.seg.mini label { flex: 0 0 auto; }
-.seg.mini span { height: 30px; line-height: 30px; padding: 0 10px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; }
+/* language menu: an icon button dropping a small list, current language dotted */
+.langmenu { position: relative; flex: 0 0 auto; }
+.langbtn {
+  width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent;
+  color: var(--ink-2); display: grid; place-items: center; cursor: pointer;
+}
+.langbtn:hover, .langbtn[aria-expanded="true"] { background: var(--hover); color: var(--ink); }
+.langlist {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 6;
+  min-width: 150px; padding: 6px; border-radius: 12px;
+  background: var(--bg-2); border: 1px solid var(--line);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.langlist button {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  width: 100%; height: 36px; padding: 0 12px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--ink-2); font: inherit; font-weight: 500; text-align: left; cursor: pointer;
+}
+.langlist button:hover { background: var(--hover); color: var(--ink); }
+.langlist button[aria-checked="true"] { color: var(--ink); }
+.langlist button[aria-checked="true"]::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
 .seg { display: flex; width: 100%; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--well); }
 .seg label { position: relative; cursor: pointer; flex: 1 1 0; min-width: 0; }
 .seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
@@ -369,4 +473,3 @@ button.secondary:hover { background: var(--hover); color: var(--ink); }
 button.danger { background: transparent; color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
 button.danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
 button:focus-visible { outline: 2px solid var(--today); outline-offset: 2px; }
-.actions { display: flex; flex-wrap: wrap; gap: 10px; }

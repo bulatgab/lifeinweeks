@@ -58,7 +58,7 @@
     "author": { "@type": "Person", "name": "Bulat Gabidullin", "url": "https://bulatgab.github.io/" },
     "isBasedOn": [
       "https://waitbutwhy.com/2014/05/life-weeks.html",
-      "https://www.youtube.com/watch?v=MBRqu0YOH14"
+      "https://www.youtube.com/watch?v=JXeJANDKwDc"
     ]
   }
   </script>
@@ -71,10 +71,65 @@
 <main id="stage">
   <canvas id="grid" aria-label="Your life in weeks, one dot per week"></canvas>
   <footer id="bar">
-    <p id="stats" aria-live="polite">One dot per week. <b>Tap the button to begin.</b></p>
+    <p id="stats" aria-live="polite"></p>
     <ul id="legend"></ul>
   </footer>
 </main>
+
+<!-- Welcome / About. Shown over the sample chart on first open, and from the
+     sheet's "About this app" link. On the bare URL this is what a crawler
+     sees, so the copy here is the page's indexable description. -->
+<div id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcome-title" hidden>
+  <div class="backdrop"></div>
+  <div class="card" tabindex="-1">
+    <header>
+      <h1 id="welcome-title" data-i18n="title">Life in Weeks</h1>
+      <div class="langmenu">
+        <button type="button" class="langbtn" data-i18n-aria="language" aria-label="Language" data-i18n-title="language" title="Language" aria-haspopup="menu" aria-expanded="false">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
+        </button>
+        <div class="langlist" role="menu" hidden>
+          <button type="button" role="menuitemradio" data-lang="en" aria-checked="false">English</button>
+          <button type="button" role="menuitemradio" data-lang="ru" aria-checked="false">Русский</button>
+        </div>
+      </div>
+    </header>
+    <p data-i18n-html="aboutLead">Life in Weeks draws your whole life, one dot for every week. Inspired by the essay <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> on Wait But Why and the video <a href="https://www.youtube.com/watch?v=JXeJANDKwDc" target="_blank" rel="noopener">When This Number Hits 5200, You Will Be Dead</a> from Kurzgesagt.</p>
+    <p class="note" data-i18n-html="aboutPrivacy"><b>Nothing is stored anywhere. There is no account, no server and nothing kept in your browser: the whole chart is encoded in the page address. Bookmark it or copy the link to keep it, and re-save the bookmark after you change something.</b></p>
+    <p class="hint" data-i18n-html="aboutHow">Enter your date of birth and expected lifespan, then colour the periods that shaped you — school, university, jobs, relationships, the places you have lived — and ring single dates such as a wedding or a move. Share the result as a link or save it as an image.</p>
+    <p class="hint" data-i18n-html="aboutFoot">Free and open source. Works on phones and desktops. Supports English and Russian. <a href="https://github.com/bulatgab/lifeinweeks/issues" target="_blank" rel="noopener">Report an issue</a>.</p>
+    <button id="continue" type="button" class="primary" data-i18n="continue">Continue</button>
+  </div>
+</div>
+
+<button id="share-fab" type="button" data-i18n-aria="openShare" aria-label="Share the chart" aria-haspopup="dialog" aria-controls="sharepop" hidden>
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+      d="M12 3v12M8 7l4-4 4 4M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/>
+  </svg>
+</button>
+
+<div id="sharepop" role="dialog" aria-modal="true" aria-labelledby="share-title" hidden>
+  <div class="backdrop"></div>
+  <div class="card">
+    <header>
+      <h2 id="share-title" data-i18n="share">Share</h2>
+      <button id="share-close" type="button" class="x" data-i18n-aria="close" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
+        </svg>
+      </button>
+    </header>
+    <div class="opt">
+      <button id="share-link" type="button" class="primary" data-i18n="copyLink">Copy link</button>
+      <p class="hint" data-i18n="shareLinkHint">Anyone who opens the link sees the whole chart — every period, date and label — because the link is the data. Nothing passes through a server.</p>
+    </div>
+    <div class="opt">
+      <button id="share-image" type="button" class="primary" data-i18n="saveImage">Save image</button>
+      <p class="hint" data-i18n="shareImageHint">A PNG of the chart with the stats and legend — handy for messaging apps and social media. It shows exactly what you see, nothing more.</p>
+    </div>
+  </div>
+</div>
 
 <button id="fab" type="button" data-i18n-aria="openSettings" aria-label="Open settings" aria-haspopup="dialog" aria-controls="panel">
   <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
@@ -93,9 +148,14 @@
   <section id="sheet">
     <header>
       <h1 id="panel-title" data-i18n="panelTitle">Your life in weeks</h1>
-      <div id="lang" class="seg mini" role="radiogroup" data-i18n-aria="language" aria-label="Language">
-        <label><input type="radio" name="lang" value="en"><span>EN</span></label>
-        <label><input type="radio" name="lang" value="ru"><span>RU</span></label>
+      <div class="langmenu">
+        <button type="button" class="langbtn" data-i18n-aria="language" aria-label="Language" data-i18n-title="language" title="Language" aria-haspopup="menu" aria-expanded="false">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
+        </button>
+        <div class="langlist" role="menu" hidden>
+          <button type="button" role="menuitemradio" data-lang="en" aria-checked="false">English</button>
+          <button type="button" role="menuitemradio" data-lang="ru" aria-checked="false">Русский</button>
+        </div>
       </div>
       <button id="close" type="button" data-i18n-aria="closeSettings" aria-label="Close settings">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -138,24 +198,13 @@
       <label><input type="radio" name="water" value="3"><span data-i18n="water3">Filled</span></label>
     </div>
 
-    <h2 data-i18n="saving">Saving</h2>
-    <p class="hint" data-i18n-html="savingHint">There is no account and nothing is stored on any server or in your browser. Everything you enter is written into this page’s address — bookmark it, or copy the link to keep it or open it on another device. Because the address <em>is</em> the data, re-save your bookmark after you change something.</p>
-    <div class="actions">
-      <button id="copy" type="button" class="primary" data-i18n="copyLink">Copy link</button>
-      <button id="export" type="button" class="primary" data-i18n="saveImage">Save image</button>
-      <button id="reset" type="button" class="danger" data-i18n="reset">Reset everything</button>
-    </div>
+    <h2 data-i18n="resetTitle">Reset</h2>
+    <button id="reset" type="button" class="danger" data-i18n="reset">Reset everything</button>
     <div id="colorpop" hidden>
       <div class="presets"></div>
     </div>
 
-    <section class="about">
-      <h2 data-i18n="about">About</h2>
-      <p class="hint" data-i18n-html="about1">Life in Weeks draws your whole life on a single screen: one dot for every week of an 80-year life — about 4,170 of them — with the weeks already lived dimmed and the ones ahead bright. It follows the idea of Tim Urban’s essay <em>Your Life in Weeks</em> on Wait But Why and Kurzgesagt’s video <em>What Are You Doing With Your Life?</em>: seeing all your weeks at once makes time feel finite in a way no calendar does.</p>
-      <p class="hint" data-i18n-html="about2">Enter your date of birth and expected lifespan, then colour the periods that shaped you — school, university, jobs, relationships, the places you have lived — and ring single dates such as a wedding or a move. Save the chart as an image or copy the link; no account, and nothing stored anywhere, because the whole picture is encoded in the page address. Free and open source, it works on phones and desktops, in English and Russian.</p>
-    </section>
-
-    <p class="hint credits" data-i18n-html="credits">Inspired by <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) and <a href="https://www.youtube.com/watch?v=MBRqu0YOH14" target="_blank" rel="noopener">this Kurzgesagt video</a>. <a href="https://github.com/bulatgab/lifeinweeks" target="_blank" rel="noopener">Source</a>.</p>
+    <p class="hint foot"><button id="about-open" type="button" class="linkish" data-i18n="aboutOpen">About this app</button></p>
   </section>
 </div>
 
