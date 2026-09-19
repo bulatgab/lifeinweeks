@@ -5,6 +5,8 @@ and the future bright.
 
 **Live:** https://bulatgab.github.io/lifeinweeks/
 
+[![A grid of dots, one per week of an 80-year life: past weeks dimmed, future weeks bright, with coloured periods for school, university, work and home](og.png)](https://bulatgab.github.io/lifeinweeks/)
+
 Inspired by Wait But Why's [*Your Life in Weeks*](https://waitbutwhy.com/2014/05/life-weeks.html)
 and Kurzgesagt's [*When This Number Hits 5200, You Will Be Dead*](https://www.youtube.com/watch?v=JXeJANDKwDc)
 (originally titled *What Are You Doing With Your Life? The Tail End*).
