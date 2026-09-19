@@ -66,7 +66,9 @@ and Kurzgesagt's [*When This Number Hits 5200, You Will Be Dead*](https://www.yo
   app. Dates, numbers and plurals follow the language.
 - **Everything else is under two buttons.** The grid is the page; a floating
   action button opens the settings sheet, a smaller one next to it the share
-  options.
+  options. On a phone the sheet fills the screen and ends in a pinned "Done"
+  bar within thumb reach; on a wide screen it is a side panel next to the
+  chart, closed by the X, Escape or a click outside.
 
 ## URL format
 

@@ -37,7 +37,7 @@ const I18N = {
     pageTitle: 'Life in Weeks — your life calendar, one dot per week',
     description: 'See your whole life as a grid of weeks — one dot per week, past dimmed, future bright. Free, no account, nothing stored: the whole chart lives in the link.',
     panelTitle: 'Your life in weeks',
-    openSettings: 'Open settings', closeSettings: 'Close settings', language: 'Language',
+    openSettings: 'Open settings', closeSettings: 'Close settings', done: 'Done', language: 'Language',
     birth: 'Date of birth', lifespan: 'Expected lifespan', years: 'years',
     totalHint: (total, left) => `${total} weeks in total; ${left} still ahead.`,
     periods: 'Periods',
@@ -66,8 +66,8 @@ const I18N = {
     deletePeriod: 'Delete period', deleteDate: 'Delete date',
     drag: 'Drag to reorder (or use the arrow keys)', colour: 'Colour', customColour: 'Custom colour',
     day: 'Day', month: 'Month', year: 'Year',
-    stats: (lived, left, pct, total) => `<b>${lived}</b> weeks lived · <b>${left}</b> left · ${pct}% of ${total}`,
-    statsDemo: (lived, left, pct, total) => `<b class="tag">Example</b> ${lived} weeks lived · ${left} left · ${pct}% of ${total}`,
+    stats: (lived, left, pct, total) => `<span><b>${lived}</b> weeks lived</span> <span>· <b>${left}</b> left</span> <span>· ${pct}% of ${total}</span>`,
+    statsDemo: (lived, left, pct, total) => `<b class="tag">Example</b> <span>${lived} weeks lived</span> <span>· ${left} left</span> <span>· ${pct}% of ${total}</span>`,
     sample: { school: 'School', uni: 'University', job: 'First job', home: 'Berlin', wedding: 'Wedding' },
     today: 'TODAY',
     weekOf: (n, total) => `Week ${n} of ${total}`,
@@ -81,7 +81,7 @@ const I18N = {
     pageTitle: 'Жизнь в неделях — календарь жизни, одна точка на неделю',
     description: 'Вся ваша жизнь на одном экране — одна точка на неделю: прошлое приглушено, будущее яркое. Бесплатно, без аккаунта, ничего не хранится: вся картина живёт в ссылке.',
     panelTitle: 'Ваша жизнь в неделях',
-    openSettings: 'Открыть настройки', closeSettings: 'Закрыть настройки', language: 'Язык',
+    openSettings: 'Открыть настройки', closeSettings: 'Закрыть настройки', done: 'Готово', language: 'Язык',
     birth: 'Дата рождения', lifespan: 'Ожидаемая продолжительность жизни', years: 'лет',
     totalHint: (total, left, w) => `Всего ${total} ${w(total)}; впереди ещё ${left}.`,
     periods: 'Периоды',
@@ -108,8 +108,8 @@ const I18N = {
     deletePeriod: 'Удалить период', deleteDate: 'Удалить дату',
     drag: 'Перетащите, чтобы изменить порядок (или используйте стрелки)', colour: 'Цвет', customColour: 'Свой цвет',
     day: 'День', month: 'Месяц', year: 'Год',
-    stats: (lived, left, pct, total, w) => `<b>${lived}</b> ${w(lived)} прожито · <b>${left}</b> осталось · ${pct}% из ${total}`,
-    statsDemo: (lived, left, pct, total, w) => `<b class="tag">Пример</b> ${lived} ${w(lived)} прожито · ${left} осталось · ${pct}% из ${total}`,
+    stats: (lived, left, pct, total, w) => `<span><b>${lived}</b> ${w(lived)} прожито</span> <span>· <b>${left}</b> осталось</span> <span>· ${pct}% из ${total}</span>`,
+    statsDemo: (lived, left, pct, total, w) => `<b class="tag">Пример</b> <span>${lived} ${w(lived)} прожито</span> <span>· ${left} осталось</span> <span>· ${pct}% из ${total}</span>`,
     sample: { school: 'Школа', uni: 'Университет', job: 'Первая работа', home: 'Берлин', wedding: 'Свадьба' },
     today: 'СЕГОДНЯ',
     weekOf: (n, total) => `Неделя ${n} из ${total}`,
@@ -769,27 +769,52 @@ new ResizeObserver(() => {
 // iOS offers "Save Image"); elsewhere it downloads.
 // ---------------------------------------------------------------------------
 
+// Greedy line-wrap of `text` at `sep`, keeping each line within `max` px.
+function wrapAt(c, text, sep, max) {
+  const rows = [];
+  let cur = '';
+  for (const part of text.split(sep)) {
+    const next = cur ? cur + sep + part : part;
+    if (cur && c.measureText(next).width > max) { rows.push(cur); cur = part; }
+    else cur = next;
+  }
+  if (cur) rows.push(cur);
+  return rows;
+}
+
 function exportImage() {
   const th = theme();
   const rect = canvas.getBoundingClientRect();
   const w = Math.round(rect.width), gh = Math.round(rect.height);
   const scale = clamp(window.devicePixelRatio || 1, 2, 3);
-  const pad = 16, line = 20;
+  const pad = 16, line = 20, avail = w - pad * 2;
+  const font = (weight, px) => `${weight} ${px}px system-ui, -apple-system, sans-serif`;
   const entries = legendEntries();
+  const credit = 'bulatgab.github.io/lifeinweeks';
+  const pct = Math.round((model.lived / model.total) * 100);
+  const stats = t(model.demo ? 'statsDemo' : 'stats', fmtInt(model.lived), fmtInt(model.left), pct, fmtInt(model.total)).replace(/<[^>]+>/g, '');
 
-  // measure the legend wrap first
+  // Measure the footer before sizing the canvas (resizing resets the context).
+  // On a phone-width canvas the stats can outgrow the line, so they wrap at
+  // their " · " separators; and the site credit only shares the stats row
+  // when both fit side by side, otherwise it gets its own row under the legend.
   const off = document.createElement('canvas');
   const oc = off.getContext('2d');
-  oc.font = '500 12px system-ui, -apple-system, sans-serif';
+  oc.font = font(600, 13);
+  const statsRows = wrapAt(oc, stats, ' · ', avail);
+  const statsW = oc.measureText(statsRows[0]).width;
+  oc.font = font(500, 11);
+  const creditInline = statsRows.length === 1 && statsW + 24 + oc.measureText(credit).width <= avail;
+  oc.font = font(500, 12);
   const rowsOf = [];
   let cur = [], x = 0;
   for (const en of entries) {
     const wdt = 14 + oc.measureText(en.text).width + 16;
-    if (x + wdt > w - pad * 2 && cur.length) { rowsOf.push(cur); cur = []; x = 0; }
+    if (x + wdt > avail && cur.length) { rowsOf.push(cur); cur = []; x = 0; }
     cur.push(en); x += wdt;
   }
   if (cur.length) rowsOf.push(cur);
-  const footer = pad + line + rowsOf.length * line + pad;
+  const footer = pad + (statsRows.length + rowsOf.length + (creditInline ? 0 : 1)) * line + pad;
   const h = gh + footer;
 
   off.width = Math.round(w * scale);
@@ -799,22 +824,24 @@ function exportImage() {
   oc.fillRect(0, 0, w, h);
   paintGrid(oc, w, gh);
 
-  // footer: stats line, legend rows, site credit on the right
+  // footer: stats line(s), legend rows, site credit on the right
   const inkDim = mixOklab(th.ink, th.bg, 0.4);
-  const pct = Math.round((model.lived / model.total) * 100);
-  const stats = t(model.demo ? 'statsDemo' : 'stats', fmtInt(model.lived), fmtInt(model.left), pct, fmtInt(model.total)).replace(/<[^>]+>/g, '');
+  const drawCredit = (y) => {
+    oc.font = font(500, 11);
+    oc.fillStyle = inkDim;
+    oc.textAlign = 'right';
+    oc.fillText(credit, w - pad, y);
+    oc.textAlign = 'left';
+  };
   let y = gh + pad + line / 2;
   oc.textBaseline = 'middle';
   oc.textAlign = 'left';
-  oc.font = '600 13px system-ui, -apple-system, sans-serif';
+  oc.font = font(600, 13);
   oc.fillStyle = th.ink;
-  oc.fillText(stats, pad, y);
-  oc.font = '500 11px system-ui, -apple-system, sans-serif';
-  oc.fillStyle = inkDim;
-  oc.textAlign = 'right';
-  oc.fillText('bulatgab.github.io/lifeinweeks', w - pad, y);
-  oc.textAlign = 'left';
-  oc.font = '500 12px system-ui, -apple-system, sans-serif';
+  statsRows.forEach((row, i) => oc.fillText(row, pad, y + i * line));
+  if (creditInline) drawCredit(y);
+  y += (statsRows.length - 1) * line;
+  oc.font = font(500, 12);
   for (const row of rowsOf) {
     y += line;
     let xx = pad;
@@ -827,6 +854,7 @@ function exportImage() {
       xx += 14 + oc.measureText(en.text).width + 16;
     }
   }
+  if (!creditInline) drawCredit(y + line);
 
   // Build the blob synchronously so the share call stays inside the user gesture.
   const dataURL = off.toDataURL('image/png');
@@ -1370,6 +1398,7 @@ document.getElementById('reset').addEventListener('click', () => {
 
 fab.addEventListener('click', openPanel);
 closeBtn.addEventListener('click', closePanel);
+document.getElementById('done').addEventListener('click', closePanel);
 document.getElementById('backdrop').addEventListener('click', closePanel);
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;

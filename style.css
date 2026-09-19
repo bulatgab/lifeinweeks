@@ -69,7 +69,11 @@ html, body {
   letter-spacing: 0.06em; text-transform: uppercase; vertical-align: 1px;
 }
 
-#stats { margin: 0; white-space: nowrap; }
+/* The stats line may wrap on a narrow phone, but only between its " · "
+   segments (each is a span), never inside one — otherwise it runs under the
+   floating buttons on the right. */
+#stats { margin: 0; }
+#stats span { white-space: nowrap; }
 #stats b { color: var(--ink-2); font-weight: 600; }
 
 #legend {
@@ -224,29 +228,48 @@ html, body {
 #sharepop .opt .hint { margin: 8px 0 0; }
 @media (prefers-reduced-motion: reduce) { #welcome .card, #sharepop .card { animation: none; } }
 
+/* On phones the sheet fills the screen and ends above a pinned "Done" bar:
+   the chart is hidden, so the way back to it should be an affirmative button
+   within thumb reach, not only the X at the top. The sheet stops at the bar
+   (rather than scrolling under it) so nothing — the last row's buttons, the
+   colour popover — can end up covered. */
+#panel { --foot: calc(61px + var(--sab)); }   /* bar: 10 + 40 + 10 padding/button + 1 border */
 #sheet {
   position: absolute;
-  inset: 0;
+  inset: 0 0 var(--foot) 0;
   background: var(--bg-2);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 0 calc(20px + var(--sar)) calc(28px + var(--sab)) calc(20px + var(--sal));
+  padding: 0 calc(20px + var(--sar)) 24px calc(20px + var(--sal));
   animation: rise 180ms ease-out;
 }
+#sheet-foot {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 10px calc(20px + var(--sar)) calc(10px + var(--sab)) calc(20px + var(--sal));
+  background: var(--bg-2);
+  border-top: 1px solid var(--line);
+  animation: rise 180ms ease-out;
+}
+#sheet-foot button { width: 100%; }
 @keyframes rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 
+/* Wide screens: a side panel next to the still-visible chart, closed by the
+   X, Escape or a click outside — the bar would be redundant. */
 @media (min-width: 720px) {
   #sheet {
     inset: 0 0 0 auto;
     width: min(460px, 100%);
+    padding-bottom: calc(28px + var(--sab));
     border-left: 1px solid var(--line);
     box-shadow: -12px 0 40px rgba(0, 0, 0, 0.35);
     animation: slide 180ms ease-out;
   }
+  #sheet-foot { display: none; }
   @keyframes slide { from { transform: translateX(32px); opacity: 0; } to { transform: none; opacity: 1; } }
 }
 @media (prefers-reduced-motion: reduce) {
-  #sheet, #fab { animation: none; transition: none; }
+  #sheet, #sheet-foot, #fab { animation: none; transition: none; }
 }
 
 #sheet header {
