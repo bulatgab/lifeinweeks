@@ -105,7 +105,7 @@
   </div>
 </div>
 
-<button id="share-fab" type="button" data-i18n-aria="openShare" aria-label="Share the chart" aria-haspopup="dialog" aria-controls="sharepop" hidden>
+<button id="share-fab" type="button" data-i18n-aria="openShare" aria-label="Share the chart" aria-haspopup="dialog" aria-controls="sharepop">
   <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
     <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
       d="M12 3v12M8 7l4-4 4 4M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/>
@@ -125,11 +125,10 @@
     </header>
     <div class="opt">
       <button id="share-link" type="button" class="primary" data-i18n="copyLink">Copy link</button>
-      <p class="hint" data-i18n="shareLinkHint">Anyone who opens the link sees the whole chart — every period, date and label — because the link is the data. Nothing passes through a server.</p>
+      <p class="hint" id="share-link-hint" data-i18n="shareLinkHint">Anyone with the link sees everything you entered: date of birth, expected lifespan, periods, dates and their labels.</p>
     </div>
     <div class="opt">
       <button id="share-image" type="button" class="primary" data-i18n="saveImage">Save image</button>
-      <p class="hint" data-i18n="shareImageHint">A PNG of the chart with the stats and legend — handy for messaging apps and social media. It shows exactly what you see, nothing more.</p>
     </div>
   </div>
 </div>

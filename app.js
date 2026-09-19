@@ -50,9 +50,9 @@ const I18N = {
     connect: 'Connect dots', water0: 'Off', water1: 'Scalloped', water2: 'Straight', water3: 'Filled',
     share: 'Share', openShare: 'Share the chart', close: 'Close',
     copyLink: 'Copy link', copied: 'Copied!', copyFail: 'Copy from the address bar',
-    shareLinkHint: 'Anyone who opens the link sees the whole chart — every period, date and label — because the link is the data. Nothing passes through a server.',
+    shareLinkHint: 'Anyone with the link sees everything you entered: date of birth, expected lifespan, periods, dates and their labels.',
+    shareLinkDemoHint: 'This link opens the app with the example chart — nothing of yours is in it.',
     saveImage: 'Save image',
-    shareImageHint: 'A PNG of the chart with the stats and legend — handy for messaging apps and social media. It shows exactly what you see, nothing more.',
     resetTitle: 'Reset', reset: 'Reset everything',
     // About / welcome dialog. The English copy is also in index.html for
     // crawlers that don't run JS — keep the two in sync.
@@ -94,9 +94,9 @@ const I18N = {
     connect: 'Соединить точки', water0: 'Нет', water1: 'Волной', water2: 'Прямо', water3: 'Заливкой',
     share: 'Поделиться', openShare: 'Поделиться картой', close: 'Закрыть',
     copyLink: 'Скопировать ссылку', copied: 'Скопировано!', copyFail: 'Скопируйте из адресной строки',
-    shareLinkHint: 'Тот, кто откроет ссылку, увидит всю карту — каждый период, дату и подпись, потому что ссылка и есть данные. Через сервер ничего не проходит.',
+    shareLinkHint: 'Любой, у кого есть ссылка, увидит всё, что вы ввели: дату рождения, ожидаемую продолжительность жизни, периоды, даты и подписи.',
+    shareLinkDemoHint: 'Эта ссылка открывает приложение с примером — ваших данных в ней нет.',
     saveImage: 'Сохранить картинку',
-    shareImageHint: 'PNG-картинка с картой, статистикой и легендой — удобно для мессенджеров и соцсетей. На ней ровно то, что вы видите, и ничего больше.',
     resetTitle: 'Сброс', reset: 'Сбросить всё',
     aboutLead: '«Жизнь в неделях» рисует всю вашу жизнь — по точке на каждую неделю. По мотивам эссе <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) и видео <a href="https://www.youtube.com/watch?v=JXeJANDKwDc" target="_blank" rel="noopener">When This Number Hits 5200, You Will Be Dead</a> от Kurzgesagt.',
     aboutPrivacy: '<b>Ничего нигде не хранится. Ни аккаунта, ни сервера, ни данных в браузере: вся картина закодирована в адресе страницы. Добавьте его в закладки или скопируйте ссылку, чтобы сохранить, — и после изменений сохраните закладку заново.</b>',
@@ -741,7 +741,6 @@ function legendEntries() {
 function renderStats() {
   const pct = Math.round((model.lived / model.total) * 100);
   statsEl.innerHTML = t(model.demo ? 'statsDemo' : 'stats', fmtInt(model.lived), fmtInt(model.left), pct, fmtInt(model.total));
-  shareFab.hidden = model.demo;   // nothing of the user's to share yet
   legendEl.replaceChildren(...legendEntries().map(en => {
     const li = document.createElement('li');
     li.style.setProperty('--c', en.color);
@@ -803,7 +802,7 @@ function exportImage() {
   // footer: stats line, legend rows, site credit on the right
   const inkDim = mixOklab(th.ink, th.bg, 0.4);
   const pct = Math.round((model.lived / model.total) * 100);
-  const stats = t('stats', fmtInt(model.lived), fmtInt(model.left), pct, fmtInt(model.total)).replace(/<\/?b>/g, '');
+  const stats = t(model.demo ? 'statsDemo' : 'stats', fmtInt(model.lived), fmtInt(model.left), pct, fmtInt(model.total)).replace(/<[^>]+>/g, '');
   let y = gh + pad + line / 2;
   oc.textBaseline = 'middle';
   oc.textAlign = 'left';
@@ -1325,6 +1324,8 @@ document.getElementById('share-link').addEventListener('click', async (e) => {
 document.getElementById('share-image').addEventListener('click', exportImage);
 
 function openShare() {
+  // the bare link carries no data, so the warning would be wrong for the sample
+  document.getElementById('share-link-hint').textContent = t(model.demo ? 'shareLinkDemoHint' : 'shareLinkHint');
   sharePop.hidden = false;
   shareFab.setAttribute('aria-expanded', 'true');
   hideTip();

@@ -57,8 +57,9 @@ and Kurzgesagt's [*When This Number Hits 5200, You Will Be Dead*](https://www.yo
   and label, because the link *is* the data) or save an image. The image is
   the chart plus the stats and legend rendered off-screen at 2–3×, handed to
   the share sheet on touch devices (on iOS that offers "Save Image") or
-  downloaded as a PNG elsewhere. The share button is hidden while the sample
-  chart is showing.
+  downloaded as a PNG elsewhere. While the sample chart is showing, the link
+  hint says so (the bare link carries no data) and the exported image is
+  labelled "Example".
 - **English and Russian.** Detected from the browser; an explicit choice is
   stored as `?lang=`. The picker is a "translate" icon (in the welcome dialog
   and the sheet header) that drops a two-entry menu styled like the rest of the
