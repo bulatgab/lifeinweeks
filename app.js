@@ -48,6 +48,8 @@ const I18N = {
     noDates: 'No dates yet.', addDate: '+ Add date',
     theme: 'Theme', themes: { dusk: 'Dusk', ink: 'Ink', slate: 'Slate', paper: 'Paper' },
     connect: 'Connect dots', water0: 'Off', water1: 'Scalloped', water2: 'Straight', water3: 'Filled',
+    layout: 'Layout', yearRows: 'One row per year',
+    yearRowsHint: 'The last week of every year is 8 or 9 days long.',
     share: 'Share', openShare: 'Share the chart', close: 'Close',
     copyLink: 'Copy link', copied: 'Copied!', copyFail: 'Copy from the address bar',
     shareLinkHint: 'Anyone with the link sees everything you entered: date of birth, expected lifespan, periods, dates and their labels.',
@@ -92,6 +94,8 @@ const I18N = {
     noDates: 'Дат пока нет.', addDate: '+ Добавить дату',
     theme: 'Тема', themes: { dusk: 'Сумерки', ink: 'Чернила', slate: 'Графит', paper: 'Бумага' },
     connect: 'Соединить точки', water0: 'Нет', water1: 'Волной', water2: 'Прямо', water3: 'Заливкой',
+    layout: 'Сетка', yearRows: 'Одна строка — один год',
+    yearRowsHint: 'Последняя неделя каждого года длится 8 или 9 дней.',
     share: 'Поделиться', openShare: 'Поделиться картой', close: 'Закрыть',
     copyLink: 'Скопировать ссылку', copied: 'Скопировано!', copyFail: 'Скопируйте из адресной строки',
     shareLinkHint: 'Любой, у кого есть ссылка, увидит всё, что вы ввели: дату рождения, ожидаемую продолжительность жизни, периоды, даты и подписи.',
@@ -254,7 +258,7 @@ function ageAt(birth, ts) {
 
 // ---------------------------------------------------------------------------
 // State <-> URL
-//   ?b=1990-01-01&l=80&t=slate&c=2&lang=ru
+//   ?b=1990-01-01&l=80&t=slate&c=2&y=1&lang=ru    (y=1: one row per year)
 //    &r=2008-09-01~2013-06-30~ffb340~University   (period; empty end = ongoing)
 //    &d=2015-08-22~22c9a8~Wedding                 (single date, drawn as a ring)
 // ---------------------------------------------------------------------------
@@ -264,6 +268,7 @@ const state = {
   years: DEFAULT_YEARS,
   theme: DEFAULT_THEME,
   water: 0,           // 0 off · 1 scalloped · 2 straight · 3 filled
+  yearRows: false,    // one row per year of life instead of the densest fit
   lang: detectLang(),
   langExplicit: false, // only an explicit choice is written to the URL
   ranges: [],         // { start: ts|null, end: ts|null, color, label }
@@ -279,6 +284,7 @@ function readURL() {
   state.years = Number.isFinite(l) ? clamp(l, 1, 150) : DEFAULT_YEARS;
   state.theme = THEMES[p.get('t')] ? p.get('t') : DEFAULT_THEME;
   state.water = ['1', '2', '3'].includes(p.get('c')) ? +p.get('c') : 0;
+  state.yearRows = p.get('y') === '1';
   if (I18N[p.get('lang')]) { state.lang = p.get('lang'); state.langExplicit = true; }
   state.ranges = p.getAll('r').map(decodeRange).filter(Boolean);
   state.events = p.getAll('d').map(decodeEvent).filter(Boolean);
@@ -308,6 +314,7 @@ function writeURL() {
   if (state.years !== DEFAULT_YEARS) parts.push('l=' + state.years);
   if (state.theme !== DEFAULT_THEME) parts.push('t=' + state.theme);
   if (state.water) parts.push('c=' + state.water);
+  if (state.yearRows) parts.push('y=1');
   if (state.langExplicit) parts.push('lang=' + state.lang);
   for (const r of state.ranges) {
     if (r.start === null) continue;
@@ -425,9 +432,21 @@ function computeModel() {
   const th = theme();
   const birth = src.birth;
   const death = addYears(birth, src.years);
-  const total = Math.max(1, Math.floor((death - birth) / WEEK));
+  // Every year of life has 52 weeks, counted afresh from each birthday: week k
+  // of year y starts 7k days after the y-th birthday, and the last runs on to
+  // the eve of the next one (8 or 9 days, as 365.2425 / 7 = 52.18). So week i
+  // is always year floor(i / 52), and a row of 52 is exactly one year.
+  const total = 52 * src.years;
+  const weekOf = (ts) => {
+    const y = ageAt(birth, ts);
+    return 52 * y + Math.min(51, Math.floor((ts - addYears(birth, y)) / WEEK));
+  };
+  const weekSpan = (i) => {
+    const y = Math.floor(i / 52), k = i - 52 * y;
+    const start = addYears(birth, y) + k * WEEK;
+    return [start, k === 51 ? addYears(birth, y + 1) - DAY : start + 6 * DAY];
+  };
   const today = todayUTC();
-  const weekOf = (ts) => Math.floor((ts - birth) / WEEK);
   const cur = weekOf(today);
 
   const colors = new Array(total);
@@ -453,7 +472,7 @@ function computeModel() {
   }
 
   const lived = clamp(cur, 0, total);
-  return { birth, death, total, today, cur, lived, left: total - lived, colors, covering, marks, weekOf, demo: src !== state };
+  return { birth, death, years: src.years, total, today, cur, lived, left: total - lived, colors, covering, marks, weekOf, weekSpan, demo: src !== state };
 }
 
 // The densest grid of n square cells that fits a W x H box.
@@ -504,7 +523,11 @@ function paintGrid(c, w, h) {
   const top = 30;
   const W = Math.max(1, w - pad * 2);
   const H = Math.max(1, h - pad - top);
-  const { cols, rows, cell } = bestGrid(model.total, W, H);
+  // One row per year of life (a fixed shape; the box only sets the dot size),
+  // or the densest grid that fits.
+  const { cols, rows, cell } = state.yearRows
+    ? { cols: 52, rows: model.years, cell: Math.min(W / 52, H / model.years) }
+    : bestGrid(model.total, W, H);
   const ox = pad + (W - cols * cell) / 2;
   const oy = top + (H - rows * cell) / 2;
   const r = cell * 0.36;
@@ -897,8 +920,7 @@ function weekAtPoint(clientX, clientY) {
 const escapeHTML = (s) => s.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 function showTip(i, clientX, clientY) {
-  const start = model.birth + i * WEEK;
-  const end = start + 6 * DAY;
+  const [start, end] = model.weekSpan(i);
   const status = i < model.cur ? t('lived') : i === model.cur ? t('thisWeek') : t('ahead');
   const tags = [
     ...(model.covering[i] || []).map(r => `<span style="--c:${r.color}">${escapeHTML(r.label || t('untitledPeriod'))}</span>`),
@@ -1019,6 +1041,7 @@ const rangesEl = document.getElementById('ranges');
 const eventsEl = document.getElementById('events');
 const themesEl = document.getElementById('themes');
 const waterEl = document.getElementById('water');
+const yearRowsIn = document.getElementById('year-rows');
 const shareFab = document.getElementById('share-fab');
 const sharePop = document.getElementById('sharepop');
 const welcome = document.getElementById('welcome');
@@ -1054,6 +1077,7 @@ function syncForm() {
   birthField.set(state.birth);
   yearsIn.value = state.years;
   waterEl.querySelector(`input[value="${state.water}"]`).checked = true;
+  yearRowsIn.checked = state.yearRows;
   updateTotalHint();
   syncRows();
   syncThemes();
@@ -1272,6 +1296,7 @@ function syncThemes() {
 waterEl.addEventListener('change', (e) => {
   if (e.target.name === 'water') { state.water = +e.target.value; render(); }
 });
+yearRowsIn.addEventListener('change', () => { state.yearRows = yearRowsIn.checked; render(); });
 
 function setLang(lang) {
   state.lang = lang;
@@ -1391,6 +1416,7 @@ document.getElementById('reset').addEventListener('click', () => {
   state.ranges = [];
   state.events = [];
   state.water = 0;
+  state.yearRows = false;
   syncForm();
   render();
   document.querySelector('#birth select').focus({ preventScroll: true });

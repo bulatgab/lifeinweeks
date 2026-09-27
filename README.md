@@ -19,8 +19,11 @@ and Kurzgesagt's [*When This Number Hits 5200, You Will Be Dead*](https://www.yo
   you're done; open it on another device and it's the same.
 - **One screen, no scrolling.** The grid picks the densest layout of square
   cells that fits the viewport, so it fills a phone in portrait, a phone in
-  landscape, or a 4K monitor without clipping. Rows do *not* correspond to
-  years; the point is the gestalt, not the calendar.
+  landscape, or a 4K monitor without clipping. By default rows do *not*
+  correspond to years; the point is the gestalt, not the calendar.
+- **Optional one row per year (`?y=1`).** 52 columns, one row per year of
+  life, each running birthday to birthday (see how weeks are counted, below).
+  The shape is fixed, so the screen sets only the dot size.
 - **Custom periods and dates.** Add any number of start/end/colour/label
   periods — school, a job, a relationship, a country — and they paint over the
   base dots; tick "Ongoing" for something still running. Single dates — a
@@ -86,15 +89,24 @@ and Kurzgesagt's [*When This Number Hits 5200, You Will Be Dead*](https://www.yo
 | `r` | one period: `start~end~rrggbb~label`, repeatable; empty `end` = ongoing (until today) |
 | `d` | one date: `date~rrggbb~label`, repeatable; drawn as a ring |
 | `c` | connect dots: `1` scalloped, `2` straight, `3` filled |
+| `y` | `1`: one row per year of life (default off, omitted) |
 | `lang` | `en` or `ru` (only written when chosen explicitly) |
 
 Dates are entered through three native `<select>`s (day / month / year) rather
 than `<input type="date">`: on iOS that gives the wheel picker, elsewhere a
 plain dropdown, with no library.
 
-Weeks are counted as whole 7-day blocks from the date of birth, so week *i*
-covers days `[7i, 7i+7)`. All date arithmetic is done at UTC midnight, which
-sidesteps daylight-saving off-by-ones.
+Every year of life has 52 weeks, counted afresh from each birthday: week *k*
+of year *y* covers days `[7k, 7k+7)` after the *y*-th birthday, except the
+last, which runs on to the eve of the next birthday — 8 or 9 days, because a
+year is 365.2425 / 7 = 52.18 weeks. So an 80-year life is 52 × 80 = 4,160
+weeks (the convention of Wait But Why's poster and Kurzgesagt's "5,200" for
+100 years), and a row of 52 is exactly one year, with no drift. The cost is
+that the count runs about one week short of days ÷ 7 every 5–6 years. Plain
+7-day blocks from birth would keep that count but can't be laid out one year
+per row: fixed 52-week rows drift 14 weeks by 80, and birthday-aligned rows
+hold 52 or 53 weeks, leaving a ragged edge. All date arithmetic is done at
+UTC midnight, which sidesteps daylight-saving off-by-ones.
 
 ## Running locally
 
