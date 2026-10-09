@@ -304,7 +304,6 @@ html, body {
 
 .hint { color: var(--ink-3); font-size: 12.5px; margin: 6px 0 10px; }
 .hint a { color: var(--ink-2); }
-.foot { margin-top: 28px; }
 .linkish {
   padding: 0; border: 0; background: none; font: inherit; color: var(--ink-2);
   text-decoration: underline; text-underline-offset: 2px; cursor: pointer;

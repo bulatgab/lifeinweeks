@@ -201,8 +201,8 @@
     </div>
 
     <h2 data-i18n="layout">Layout</h2>
-    <label class="check"><input type="checkbox" id="year-rows"> <span data-i18n="yearRows">One row per year</span></label>
-    <p class="hint" data-i18n="yearRowsHint">The last week of every year is 8 or 9 days long.</p>
+    <label class="check"><input type="checkbox" id="year-rows" aria-describedby="year-rows-note"> <span><span data-i18n="yearRows">One row per year</span><span aria-hidden="true">*</span></span></label>
+    <p class="hint" id="year-rows-note"><span aria-hidden="true">* </span><span data-i18n="yearRowsHint">The last week of every year is 8 or 9 days long.</span></p>
 
     <h2 data-i18n="resetTitle">Reset</h2>
     <button id="reset" type="button" class="danger" data-i18n="reset">Reset everything</button>
@@ -210,7 +210,8 @@
       <div class="presets"></div>
     </div>
 
-    <p class="hint foot"><button id="about-open" type="button" class="linkish" data-i18n="aboutOpen">About this app</button></p>
+    <h2 data-i18n="aboutTitle">About</h2>
+    <p class="hint"><button id="about-open" type="button" class="linkish" data-i18n="aboutOpen">About this app</button></p>
   </section>
   <!-- Phones only (see style.css): the sheet covers the chart, so the way back
        to it is a pinned bar within thumb reach rather than the X at the top. -->
