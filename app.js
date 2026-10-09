@@ -1,5 +1,6 @@
 // Life in Weeks — one dot per week.
-// No build step, no server, no storage: the whole state is the URL query string.
+// No build step, no server, no storage: the whole state is the URL (the chart in
+// its #fragment, which never reaches the server).
 
 const DAY = 86_400_000;
 const WEEK = 7 * DAY;
@@ -59,7 +60,7 @@ const I18N = {
     // About / welcome dialog. The English copy is also in index.html for
     // crawlers that don't run JS — keep the two in sync.
     aboutLead: 'Life in Weeks draws your whole life, one dot for every week. Inspired by the essay <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> on Wait But Why and the video <a href="https://www.youtube.com/watch?v=JXeJANDKwDc" target="_blank" rel="noopener">When This Number Hits 5200, You Will Be Dead</a> from Kurzgesagt.',
-    aboutPrivacy: '<b>Nothing is stored anywhere. There is no account, no server and nothing kept in your browser: the whole chart is encoded in the page address. Bookmark it or copy the link to keep it, and re-save the bookmark after you change something.</b>',
+    aboutPrivacy: '<b>Nothing you enter is sent or stored anywhere: no account, no database, nothing kept in your browser. The whole chart lives in the page address after the “#”, a part browsers never send to a server. Bookmark it or copy the link to keep it, and re-save the bookmark after you change something.</b>',
     aboutHow: 'Enter your date of birth and expected lifespan, then colour the periods that shaped you — school, university, jobs, relationships, the places you have lived — and ring single dates such as a wedding or a move. Share the result as a link or save it as an image.',
     aboutFoot: 'Free and open source. Works on phones and desktops. Supports English and Russian. <a href="https://github.com/bulatgab/lifeinweeks/issues" target="_blank" rel="noopener">Report an issue</a>.',
     continue: 'Continue', aboutOpen: 'About this app',
@@ -103,7 +104,7 @@ const I18N = {
     saveImage: 'Сохранить картинку',
     resetTitle: 'Сброс', reset: 'Сбросить всё',
     aboutLead: '«Жизнь в неделях» рисует всю вашу жизнь — по точке на каждую неделю. По мотивам эссе <a href="https://waitbutwhy.com/2014/05/life-weeks.html" target="_blank" rel="noopener">Your Life in Weeks</a> (Wait But Why) и видео <a href="https://www.youtube.com/watch?v=JXeJANDKwDc" target="_blank" rel="noopener">When This Number Hits 5200, You Will Be Dead</a> от Kurzgesagt.',
-    aboutPrivacy: '<b>Ничего нигде не хранится. Ни аккаунта, ни сервера, ни данных в браузере: вся картина закодирована в адресе страницы. Добавьте его в закладки или скопируйте ссылку, чтобы сохранить, — и после изменений сохраните закладку заново.</b>',
+    aboutPrivacy: '<b>Ничего из того, что вы вводите, никуда не отправляется и нигде не хранится: ни аккаунта, ни базы данных, ни данных в браузере. Вся картина закодирована в адресе страницы после «#» — эту часть браузеры никогда не отправляют на сервер. Добавьте страницу в закладки или скопируйте ссылку, чтобы сохранить, — и после изменений сохраните закладку заново.</b>',
     aboutHow: 'Укажите дату рождения и ожидаемую продолжительность жизни, затем раскрасьте периоды — школу, университет, работу, отношения, города, где жили, — и отметьте кольцом отдельные даты: свадьбу, переезд. Поделитесь результатом ссылкой или сохраните картинкой.',
     aboutFoot: 'Бесплатно, исходный код открыт. Работает на телефоне и компьютере. Поддерживаются русский и английский. <a href="https://github.com/bulatgab/lifeinweeks/issues" target="_blank" rel="noopener">Сообщить об ошибке</a>.',
     continue: 'Продолжить', aboutOpen: 'О приложении',
@@ -258,9 +259,15 @@ function ageAt(birth, ts) {
 
 // ---------------------------------------------------------------------------
 // State <-> URL
-//   ?b=1990-01-01&l=80&t=slate&c=2&y=1&lang=ru    (y=1: one row per year)
+//   ?lang=ru#b=1990-01-01&l=80&t=slate&c=2&y=1    (y=1: one row per year)
 //    &r=2008-09-01~2013-06-30~ffb340~University   (period; empty end = ongoing)
 //    &d=2015-08-22~22c9a8~Wedding                 (single date, drawn as a ring)
+// The chart lives in the fragment (#…), which browsers never send to the
+// server, so opening a bookmarked chart doesn't hand anyone's dates to GitHub
+// Pages. The language stays in the query: it isn't personal, and the hreflang
+// alternates in index.html point search engines (which drop fragments) at
+// ?lang=ru. Links from before the move carry the chart in the query; readURL
+// still accepts them, and the first writeURL moves the chart into the fragment.
 // ---------------------------------------------------------------------------
 
 const state = {
@@ -278,14 +285,15 @@ const state = {
 const theme = () => THEMES[state.theme];
 
 function readURL() {
-  const p = new URLSearchParams(location.search);
+  const query = new URLSearchParams(location.search);
+  const p = location.hash.length > 1 ? new URLSearchParams(location.hash.slice(1)) : query;
   state.birth = parseISO(p.get('b'));
   const l = parseInt(p.get('l'), 10);
   state.years = Number.isFinite(l) ? clamp(l, 1, 150) : DEFAULT_YEARS;
   state.theme = THEMES[p.get('t')] ? p.get('t') : DEFAULT_THEME;
   state.water = ['1', '2', '3'].includes(p.get('c')) ? +p.get('c') : 0;
   state.yearRows = p.get('y') === '1';
-  if (I18N[p.get('lang')]) { state.lang = p.get('lang'); state.langExplicit = true; }
+  if (I18N[query.get('lang')]) { state.lang = query.get('lang'); state.langExplicit = true; }
   state.ranges = p.getAll('r').map(decodeRange).filter(Boolean);
   state.events = p.getAll('d').map(decodeEvent).filter(Boolean);
 }
@@ -315,7 +323,6 @@ function writeURL() {
   if (state.theme !== DEFAULT_THEME) parts.push('t=' + state.theme);
   if (state.water) parts.push('c=' + state.water);
   if (state.yearRows) parts.push('y=1');
-  if (state.langExplicit) parts.push('lang=' + state.lang);
   for (const r of state.ranges) {
     if (r.start === null) continue;
     parts.push('r=' + [toISO(r.start), r.end === null ? '' : toISO(r.end), r.color.slice(1), encLabel(r.label)].join('~'));
@@ -323,8 +330,9 @@ function writeURL() {
   for (const e of state.events) {
     parts.push('d=' + [toISO(e.date), e.color.slice(1), encLabel(e.label)].join('~'));
   }
-  const qs = parts.length ? '?' + parts.join('&') : '';
-  history.replaceState(null, '', location.pathname + qs + location.hash);
+  const query = state.langExplicit ? '?lang=' + state.lang : '';
+  const hash = parts.length ? '#' + parts.join('&') : '';
+  history.replaceState(null, '', location.pathname + query + hash);
 }
 
 // ---------------------------------------------------------------------------
@@ -381,7 +389,7 @@ function applyLang() {
 }
 
 // The canonical URL is the bare page (plus ?lang= when a non-default language
-// was chosen explicitly), never the personal query string, so search engines
+// was chosen explicitly), never the personal fragment, so search engines
 // fold every shared chart into one entry and don't list anyone's dates. It is
 // injected here rather than written in index.html on purpose: Google indexes
 // the rendered DOM and honours a JS-inserted canonical, whereas link-preview
@@ -1444,6 +1452,17 @@ applyLang();
 birthField.relabel();
 render();
 if (state.birth === null) openWelcome();
+
+// Pasting another chart's link into this tab, or editing the address by hand,
+// changes only the fragment, and that doesn't reload the page.
+window.addEventListener('hashchange', () => {
+  readURL();
+  applyTheme();
+  syncForm();
+  render();
+  if (state.birth === null) { if (welcome.hidden) openWelcome(); }
+  else if (!welcome.hidden) closeWelcome();
+});
 
 setInterval(() => {
   if (model && todayUTC() !== model.today) render();

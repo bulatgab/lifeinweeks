@@ -13,10 +13,11 @@ and Kurzgesagt's [*When This Number Hits 5200, You Will Be Dead*](https://www.yo
 
 ## What makes this one different
 
-- **Nothing is stored anywhere.** No server, no account, no cookies, no
-  `localStorage`. Every setting — date of birth, expected lifespan, every
-  coloured period — is encoded in the page's query string. Bookmark the URL and
-  you're done; open it on another device and it's the same.
+- **Nothing is sent or stored anywhere.** No backend, no account, no cookies,
+  no `localStorage`. Every setting — date of birth, expected lifespan, every
+  coloured period — is encoded in the URL's `#fragment`, which browsers never
+  send to the server, so not even GitHub Pages' logs see it. Bookmark the URL
+  and you're done; open it on another device and it's the same.
 - **One screen, no scrolling.** The grid picks the densest layout of square
   cells that fits the viewport, so it fills a phone in portrait, a phone in
   landscape, or a 4K monitor without clipping. By default rows do *not*
@@ -76,10 +77,18 @@ and Kurzgesagt's [*When This Number Hits 5200, You Will Be Dead*](https://www.yo
 ## URL format
 
 ```
-?b=1990-01-01&l=80&t=slate
+#b=1990-01-01&l=80&t=slate
  &r=2008-09-01~2013-06-30~e6b450~University&r=2019-03-01~~5fb3a1~Germany
  &d=2015-08-22~c1666b~Wedding
 ```
+
+The chart goes in the fragment; only `lang` goes in the query (`?lang=ru#b=…`),
+because it isn't personal and search engines, which drop fragments, need it for
+the Russian alternate. Links from before the chart moved to the fragment
+(`?b=…&r=…`) still open, and the app rewrites them to the fragment form at
+once. That first open still sent the old query to the server; re-saving the
+bookmark stops it. Changing only the fragment doesn't reload the page, so a
+`hashchange` listener re-reads it (pasting another chart's link into the tab).
 
 | key | meaning |
 |-----|---------|
@@ -90,7 +99,7 @@ and Kurzgesagt's [*When This Number Hits 5200, You Will Be Dead*](https://www.yo
 | `d` | one date: `date~rrggbb~label`, repeatable; drawn as a ring |
 | `c` | connect dots: `1` scalloped, `2` straight, `3` filled |
 | `y` | `1`: one row per year of life (default off, omitted) |
-| `lang` | `en` or `ru` (only written when chosen explicitly) |
+| `lang` | `en` or `ru`, in the query, not the fragment (only written when chosen explicitly) |
 
 Dates are entered through three native `<select>`s (day / month / year) rather
 than `<input type="date">`: on iOS that gives the wheel picker, elsewhere a
@@ -144,7 +153,7 @@ skip its Jekyll pass and serve the files verbatim.
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
     --hide-scrollbars --window-size=1200,630 --force-device-scale-factor=2 \
     --virtual-time-budget=4000 --screenshot=og.png \
-    'http://localhost:8080/?b=1990-06-15&r=1996-09-01~2007-06-30~ffb340~School&r=2007-09-01~2012-06-30~22c9a8~University&r=2012-09-01~2018-03-31~4f9df9~First%20job&r=2018-04-01~~b45309~Berlin&d=2016-08-20~f0f0f5~Wedding'
+    'http://localhost:8080/#b=1990-06-15&r=1996-09-01~2007-06-30~ffb340~School&r=2007-09-01~2012-06-30~22c9a8~University&r=2012-09-01~2018-03-31~4f9df9~First%20job&r=2018-04-01~~b45309~Berlin&d=2016-08-20~f0f0f5~Wedding'
   ```
 
   (add `<style>#fab{display:none}</style>` to a scratch copy of `index.html`
